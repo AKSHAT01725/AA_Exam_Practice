@@ -340,6 +340,40 @@ function adminError(e){ return (e&&e.code==='permission-denied')?'Firestore deni
 const sName=s=>s.student||s.displayName||s.email;
 const sActive=s=>Math.max(s.lastActivityAt||0,tsMs(s.lastSeenAt));
 
+function buildReport(maxChars){
+  const s=adm.sel, R=adm.rows||[];
+  const aS=R.filter(r=>r.section!=='B'), bS=R.filter(r=>r.section==='B');
+  const aT=aS.reduce((a,r)=>a+(r.secs||0),0), bT=bS.reduce((a,r)=>a+(r.secs||0),0);
+  const aAcc=pct(aS.filter(r=>r.correct).length,aS.length), bAcc=pct(bS.reduce((a,r)=>a+(r.score||0),0),bS.reduce((a,r)=>a+(r.max||0),0));
+  const L=[];
+  L.push(`Hi ${sName(s)},`,'','Here is your AA Exam Practice progress report.','');
+  L.push('OVERVIEW');
+  L.push(`Total practice time: ${fmtT(aT+bT)}`);
+  L.push(`Section A: ${aS.length} questions attempted, ${pctTxt(aAcc)} correct, ${fmtT(aT)}`);
+  L.push(`Section B: ${bS.length} submissions, average score ${pctTxt(bAcc)}, ${fmtT(bT)}`,'');
+  const tp=topicAgg(R).map(([t,x])=>({t,a:pct(x.A.ok,x.A.n),an:x.A.n,b:pct(x.B.sc,x.B.mx),bn:x.B.n}));
+  const rank=x=>{const v=[x.a,x.b].filter(v=>v!=null); return v.length?Math.min(...v):101;};
+  const weak=tp.filter(x=>rank(x)<=100).sort((p,q)=>rank(p)-rank(q)).slice(0,6);
+  if(weak.length){ L.push('TOPICS TO FOCUS ON (lowest scores first)');
+    weak.forEach(x=>L.push(`- ${x.t}: `+[x.an?`Section A ${pctTxt(x.a)} (${x.an} Qs)`:'',x.bn?`Section B ${pctTxt(x.b)} (${x.bn})`:''].filter(Boolean).join(', '))); L.push(''); }
+  if(bS.length){ L.push('RECENT SECTION B SCORES');
+    bS.slice(0,5).forEach(x=>L.push(`- ${x.qLabel} ${x.title||''}: ${x.score}/${x.max} (${pct(x.score,x.max)}%)${x.parts?' – '+x.parts:''}`)); L.push(''); }
+  L.push('Keep practising!');
+  let t=L.join('\n');
+  if(maxChars&&t.length>maxChars) t=t.slice(0,maxChars-30).replace(/\n[^\n]*$/,'')+'\n...\n\nKeep practising!';
+  return t;
+}
+function emailReport(){
+  const s=adm.sel; if(!s) return;
+  if(!s.email){ toast('This student has no email'); return; }
+  const subject='Your AA Exam Practice progress report';
+  window.location.href='mailto:'+encodeURIComponent(s.email).replace('%40','@')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(buildReport(1500));
+}
+async function copyReport(){
+  const t=buildReport(0);
+  try{ await navigator.clipboard.writeText(t); toast('Full report copied'); }
+  catch{ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('Full report copied');}catch{toast('Copy failed');} ta.remove(); }
+}
 const isAdminEmail=e=>adminEmails.includes(String(e||'').toLowerCase());
 async function setBan(banned){
   const s=adm.sel; if(!s||isAdminEmail(s.email)) return;
@@ -456,7 +490,7 @@ function studentHTML(){
   return `<button class="back" data-adm="back">${ic('back')}<span>All students</span></button>
   <div class="prof">${avatarOf(s,true)}<div class="grow"><h1>${esc(sName(s))}</h1><div class="muted">${esc(s.email)}</div>
     <div class="chips"><span class="chip">Member since ${whenShort(tsMs(s.createdAtAuth))}</span><span class="chip">Last login ${when(tsMs(s.lastLoginAt))}</span><span class="chip">Last active ${when(sActive(s))}</span>${s.banned?'<span class="chip" style="background:#fde8e8;color:#b42318;font-weight:800">Banned</span>':''}</div></div>
-    <div class="acts"><button class="btn" data-adm="refresh">${ic('refresh')}<span>Refresh</span></button><button class="btn" data-adm="csvOne">${ic('download')}<span>Export CSV</span></button>${isAdminEmail(s.email)?'':(s.banned?`<button class="btn" data-adm="unban" ${adm.busy?'disabled':''}><span>Unban</span></button>`:`<button class="btn danger" data-adm="ban" ${adm.busy?'disabled':''}><span>Ban</span></button>`)+`<button class="btn danger" data-adm="remove" ${adm.busy?'disabled':''}>${ic('trash')}<span>Remove</span></button>`}</div></div>
+    <div class="acts"><button class="btn" data-adm="refresh">${ic('refresh')}<span>Refresh</span></button><button class="btn" data-adm="csvOne">${ic('download')}<span>Export CSV</span></button><button class="btn" data-adm="emailRep" ${L?'disabled':''}><span>Email report</span></button><button class="btn" data-adm="copyRep" ${L?'disabled':''}><span>Copy report</span></button>${isAdminEmail(s.email)?'':(s.banned?`<button class="btn" data-adm="unban" ${adm.busy?'disabled':''}><span>Unban</span></button>`:`<button class="btn danger" data-adm="ban" ${adm.busy?'disabled':''}><span>Ban</span></button>`)+`<button class="btn danger" data-adm="remove" ${adm.busy?'disabled':''}>${ic('trash')}<span>Remove</span></button>`}</div></div>
   <div class="kpis">${kpi('clock','',L?'…':fmtT(tT),'Total time on questions')+kpi('target','a',L?'…':fmtT(aT),'Section A time',L?'':`${aS.length} attempts · ${pctTxt(aAcc)} correct`)+kpi('file','b',L?'…':fmtT(bT),'Section B time',L?'':`${bS.length} submissions · ${pctTxt(bAcc)} score`)+kpi('pulse','g',L?'…':(aS.length?fmtT(aT/aS.length):'—'),'Avg per Section A question')}</div>
   ${tT?`<div class="card"><h3>Time split</h3><div class="split"><i style="width:${aw}%;background:var(--a)"></i><i style="width:${100-aw}%;background:var(--b)"></i></div><div class="legend"><span style="--c:var(--a)">Section A · ${fmtT(aT)} (${aw}%)</span><span style="--c:var(--b)">Section B · ${fmtT(bT)} (${100-aw}%)</span></div></div>`:''}
   <div class="card"><h3>Time by topic &amp; section</h3><div id="admTopics"></div></div>
@@ -554,6 +588,8 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-adm]'); if(!b) return;
   switch(b.dataset.adm){
     case 'open': openStudent(b.dataset.id); break;
+    case 'emailRep': emailReport(); break;
+    case 'copyRep': copyReport(); break;
     case 'ban': setBan(true); break;
     case 'unban': setBan(false); break;
     case 'remove': removeStudent(); break;
