@@ -913,7 +913,7 @@ function bSubmit(n){
 function bSaveScore(n){
   const q=BQ[n], b=bState(n), reqs=reqsOf(q);
   b.score=reqs.reduce((s,r)=>s+(+b.marks[r.id]||0),0); b.scored=true;
-  ST.blog.push({n,t:Date.now(),score:b.score,max:q.marks,s:b.secs||0,parts:reqs.map(r=>(r.label||r.id)+' '+(+b.marks[r.id]||0)+'/'+(((q.scheme||[]).find(s=>s.req===r.id)||{}).max||r.marks)).join('; '),ans:bAnswerText(n)});
+  ST.blog.push({n,sub:b.subAt||0,t:Date.now(),score:b.score,max:q.marks,s:b.secs||0,parts:reqs.map(r=>(r.label||r.id)+' '+(+b.marks[r.id]||0)+'/'+(((q.scheme||[]).find(s=>s.req===r.id)||{}).max||r.marks)).join('; '),ans:bAnswerText(n)});
   save(); syncNow(); toast('Score saved: '+b.score+'/'+q.marks); renderB(n);
 }
 document.addEventListener('input',e=>{
@@ -1148,6 +1148,8 @@ window.__aaHooks={
     const q=Q[l.n]; if(!q) return null; const sc=SC[q.scenario]; if(!sc) return null;
     return {section:'A',qn:String(l.n),qLabel:label(l.n),title:sc.title,topic:sc.topic,qType:TYPE_NAME[q.type]||String(q.type),mode:l.m||'practice',secs:l.s||0,allowed:TARGET,correct:l.c?1:0,t:l.t};
   },
+  describeSub(n,b){ const q=BQ[n]; if(!q||!b||!b.submitted||!b.subAt) return null;
+    return {section:'B',qn:'B'+n,qLabel:bLabel(n),title:q.title||'',topic:q.topic||'',qType:'Constructed response',mode:'written',secs:b.secs||0,allowed:q.marks*108,score:null,max:q.marks,parts:'Submitted - not yet self-marked',t:b.subAt}; },
   setNameIfEmpty(n){ if(n&&!ST.name){ ST.name=n; save(); syncNow(); if(view==='home') renderHome(); else if(view==='report') renderReport(); } },
   askNameLater(){ if(!ST.name) setTimeout(()=>askName(false),400); },
   pause(){ flushTime(); active=null; stopTimer(); save(); }
@@ -1345,9 +1347,13 @@ async function syncAttempts(state,force){
   if(!user||!db||!state||!hooks().describe) return;
   const D=hooks().describe, key=SENT_PREFIX+user.uid;
   let sent; try{sent=new Set(JSON.parse(localStorage.getItem(key)||'[]'))}catch{sent=new Set()}
-  const aItems=[], bItems=[];
+  const aItems=[], bItems=[], bKeys=new Map();
   (state.log||[]).forEach(l=>{const k='a'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('A',l); if(d) aItems.push([k,d]);}});
-  (state.blog||[]).forEach(l=>{const k='b'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('B',l); if(d) bItems.push([k,d]);}});
+  // Section B: one document per submission (id = submission time). Saving / updating the score overwrites the same document.
+  const bDocs=new Map();
+  Object.keys(state.bAns||{}).forEach(n=>{ const bs=state.bAns[n]; const d=hooks().describeSub&&hooks().describeSub(n,bs); if(d) bDocs.set('b'+bs.subAt+'_'+n,d); });
+  (state.blog||[]).forEach(l=>{ const k='b'+(l.sub||l.t)+'_'+l.n; const d=D('B',l); if(d) bDocs.set(k,d); });
+  bDocs.forEach((d,k)=>{ const sk=k+'@'+d.score+'|'+d.parts; if(!sent.has(sk)){ bItems.push([k,d]); bKeys.set(k,sk); } });
   if(!aItems.length&&!bItems.length&&!force) return;
   const base={uid:user.uid,email:(user.email||'').toLowerCase(),student:state.name||user.displayName||''};
   const stats=computeStats(state);
@@ -1363,7 +1369,7 @@ async function syncAttempts(state,force){
   }
   // Section B: one document per write, so a single rejected document can't take the others down with it.
   for(const [k,d] of bItems){
-    try{ await FB.setDoc(FB.doc(db,'attempts',user.uid+'_'+k),clean({...base,...d})); remember(k); }
+    try{ await FB.setDoc(FB.doc(db,'attempts',user.uid+'_'+k),clean({...base,...d})); remember(bKeys.get(k)); }
     catch(e){ console.error('Section B attempt sync failed',k,d,e); firstErr=firstErr||e; }
   }
   // Student summary (shown in the admin student list) is always refreshed.

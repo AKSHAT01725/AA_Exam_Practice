@@ -344,7 +344,7 @@ function buildReport(maxChars){
   const s=adm.sel, R=adm.rows||[];
   const aS=R.filter(r=>r.section!=='B'), bS=R.filter(r=>r.section==='B');
   const aT=aS.reduce((a,r)=>a+(r.secs||0),0), bT=bS.reduce((a,r)=>a+(r.secs||0),0);
-  const aAcc=pct(aS.filter(r=>r.correct).length,aS.length), bAcc=pct(bS.reduce((a,r)=>a+(r.score||0),0),bS.reduce((a,r)=>a+(r.max||0),0));
+  const aAcc=pct(aS.filter(r=>r.correct).length,aS.length), bM=bS.filter(r=>r.score!=null), bAcc=pct(bM.reduce((a,r)=>a+r.score,0),bM.reduce((a,r)=>a+(r.max||0),0));
   const L=[];
   L.push(`Hi ${sName(s)},`,'','Here is your AA Exam Practice progress report.','');
   L.push('OVERVIEW');
@@ -356,8 +356,8 @@ function buildReport(maxChars){
   const weak=tp.filter(x=>rank(x)<=100).sort((p,q)=>rank(p)-rank(q)).slice(0,6);
   if(weak.length){ L.push('TOPICS TO FOCUS ON (lowest scores first)');
     weak.forEach(x=>L.push(`- ${x.t}: `+[x.an?`Section A ${pctTxt(x.a)} (${x.an} Qs)`:'',x.bn?`Section B ${pctTxt(x.b)} (${x.bn})`:''].filter(Boolean).join(', '))); L.push(''); }
-  if(bS.length){ L.push('RECENT SECTION B SCORES');
-    bS.slice(0,5).forEach(x=>L.push(`- ${x.qLabel} ${x.title||''}: ${x.score}/${x.max} (${pct(x.score,x.max)}%)${x.parts?' – '+x.parts:''}`)); L.push(''); }
+  if(bM.length){ L.push('RECENT SECTION B SCORES');
+    bM.slice(0,5).forEach(x=>L.push(`- ${x.qLabel} ${x.title||''}: ${x.score}/${x.max} (${pct(x.score,x.max)}%)${x.parts?' – '+x.parts:''}`)); L.push(''); }
   L.push('Keep practising!');
   let t=L.join('\n');
   if(maxChars&&t.length>maxChars) t=t.slice(0,maxChars-30).replace(/\n[^\n]*$/,'')+'\n...\n\nKeep practising!';
@@ -458,7 +458,7 @@ function renderList(){
 function topicAgg(rows){
   const m=new Map();
   rows.forEach(r=>{ const t=r.topic||'(none)'; let x=m.get(t); if(!x){x={A:{n:0,ok:0,s:0},B:{n:0,sc:0,mx:0,s:0}};m.set(t,x);}
-    if(r.section==='B'){x.B.n++;x.B.sc+=r.score||0;x.B.mx+=r.max||0;x.B.s+=r.secs||0;} else {x.A.n++;x.A.ok+=r.correct?1:0;x.A.s+=r.secs||0;} });
+    if(r.section==='B'){x.B.n++;if(r.score!=null){x.B.sc+=r.score;x.B.mx+=r.max||0;}x.B.s+=r.secs||0;} else {x.A.n++;x.A.ok+=r.correct?1:0;x.A.s+=r.secs||0;} });
   return [...m.entries()].sort((a,b)=>(b[1].A.s+b[1].B.s)-(a[1].A.s+a[1].B.s));
 }
 function renderTopics(){
@@ -484,7 +484,7 @@ function studentHTML(){
   const aS=R.filter(r=>r.section!=='B'), bS=R.filter(r=>r.section==='B');
   const aT=aS.reduce((a,r)=>a+(r.secs||0),0), bT=bS.reduce((a,r)=>a+(r.secs||0),0), tT=aT+bT;
   const aAcc=aS.length?pct(aS.filter(r=>r.correct).length,aS.length):null;
-  const bAcc=bS.length?pct(bS.reduce((a,r)=>a+(r.score||0),0),bS.reduce((a,r)=>a+(r.max||0),0)):null;
+  const bM=bS.filter(r=>r.score!=null), bAcc=bM.length?pct(bM.reduce((a,r)=>a+r.score,0),bM.reduce((a,r)=>a+(r.max||0),0)):null;
   const topics=[...new Set(R.map(r=>r.topic).filter(Boolean))].sort();
   const aw=tT?Math.round(aT/tT*100):0;
   return `<button class="back" data-adm="back">${ic('back')}<span>All students</span></button>
@@ -512,7 +512,7 @@ function renderRows(){
   box.innerHTML=`<div class="tw"><table class="rt"><thead><tr><th>Question</th><th>Date &amp; time</th><th>Section</th><th>Topic</th><th class="hm">Mode</th><th>Result</th><th class="num">Time taken</th></tr></thead><tbody>`+
   r.slice(0,adm.limit).map(x=>{
     const isB=x.section==='B';
-    const res=isB?`${x.score}/${x.max} <span class="muted">(${pct(x.score,x.max)}%)</span>`:(x.correct?'<span class="pill s">Correct</span>':'<span class="pill w">Wrong</span>');
+    const res=isB?(x.score==null?'<span class="pill w">Submitted · not marked</span>':`${x.score}/${x.max} <span class="muted">(${pct(x.score,x.max)}%)</span>`):(x.correct?'<span class="pill s">Correct</span>':'<span class="pill w">Wrong</span>');
     const over=x.allowed&&x.secs>x.allowed;
     return `<tr><td class="primary"><b>${esc(x.qLabel)}</b> <span class="muted">· ${esc(x.title)}</span></td><td data-l="Date">${whenShort(x.t)}</td><td data-l="Section"><span class="tag ${isB?'b':'a'}">${isB?'B':'A'}</span></td><td data-l="Topic">${esc(x.topic)}</td><td class="hm" data-l="Mode">${esc(x.mode)}</td><td data-l="Result">${res}</td><td class="num${over?' over':''}" data-l="Time taken"${over?` title="Over the exam-pace allowance of ${fmtT(x.allowed)}"`:''}>${fmtT(x.secs)}${over?' ▲':''}</td></tr>`;}).join('')+
   `</tbody></table></div><p class="muted" style="margin:12px 2px 0;font-size:12.5px">Showing ${Math.min(adm.limit,r.length)} of ${r.length}. ▲ = over the exam-pace allowance.${r.length>adm.limit?` <button class="back" style="margin:0 0 0 6px" data-adm="more">Show more</button>`:''}</p>`;
