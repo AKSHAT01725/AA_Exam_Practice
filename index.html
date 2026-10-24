@@ -371,6 +371,81 @@ details.fold .rich{padding:0 14px 12px;font-size:14px}
 .pdfcard small{color:var(--muted);font-size:12px}
 .pdfopen{display:inline-block;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--brand),#5b3fc4);color:#fff;font-weight:750;border-radius:11px;padding:10px 14px;margin-top:4px}
 .pdfmsg{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;color:var(--muted)}
+
+/* ===== Mobile-friendly overrides ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overflow-x:hidden}
+img,svg,video{max-width:100%}
+.rich img{max-width:100%;height:auto}
+.rich .tw,.tablewrap,.rich{max-width:100%}
+.stem,.rich,.opt,.chip,.case,.btile{overflow-wrap:anywhere}
+@media (max-width:900px){
+  .scen{position:static;max-height:none}
+  .btn,.opt,.chip,.case,.btile,.flagbtn,.iconbtn,.tabs button{min-height:44px}
+  input,textarea,select{font-size:16px!important}
+}
+@media (max-width:640px){
+  body{font-size:15px}
+  .wrap{padding:0 12px}
+  .top .wrap{flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;gap:8px}
+  .logo{order:1;min-width:0}
+  .spacer{order:2}
+  #topExtra{order:3;display:contents}
+  .account-launch{order:3}
+  .iconbtn{order:4}
+  .tabs{order:5;width:100%;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:1 0 auto;white-space:nowrap;padding:8px 12px;font-size:13px;min-height:38px}
+  .hero{padding:24px 0 10px}
+  .stat{padding:12px}.stat b{font-size:22px}
+  .section-title h2{font-size:21px}
+  .topic{padding:14px;border-radius:16px}
+  .cases{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .pbar{gap:8px}
+  .pbar h2{font-size:16px;flex:1 1 100%}
+  .qcard{padding:14px}
+  .stem{font-size:16px}
+  .opt{padding:12px;gap:10px}
+  .chip{padding:9px 12px}
+  .numrow label{min-width:100%}
+  .numrow input{width:100%}
+  .checkrow .btn,.navrow .btn{flex:1}
+  .navrow{position:sticky;bottom:0;background:var(--bg);padding:10px 0;margin-top:12px;z-index:10;border-top:1px solid var(--line)}
+  .verdict{padding:12px}
+  .pal button{width:40px;height:40px}
+  .res{padding:18px 14px}
+  .reslist{grid-template-columns:repeat(2,1fr)}
+  .rep h2{font-size:25px}
+  .rep .card{padding:14px}
+  .kpis{gap:8px}
+  .hb{grid-template-columns:70px 1fr 60px;gap:6px;font-size:12.5px}
+  .rt{font-size:13px}.rt td,.rt th{padding:7px 5px}
+  .rcard{padding:14px}
+  .atab,.atab tbody,.atab tr,.atab td,.atab th{display:block;width:100%}
+  .atab thead{display:none}
+  .atab tr{margin-bottom:10px}
+  .atab .rn{width:auto;padding:4px}
+  .secsw{display:flex;width:100%}.secsw button{flex:1}
+  .scorebar{padding:8px 10px;gap:8px}
+  .modal .box{padding:18px}
+  .modal .row .btn{flex:1}
+  .pdfwrap{padding:16px 0 30px}.pdfwrap h1{font-size:25px}
+  .pdfgrid{grid-template-columns:1fr}
+  .pdfsearch{max-width:none}
+  .adm .bar2 .grow{min-width:100%}
+  .toast{max-width:92vw;text-align:center}
+  .foot{padding:20px 0 40px}
+}
+@media (max-width:400px){
+  .logo .mark{width:30px;height:30px}
+  .actions{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .pal button{width:38px}
+}
+@supports (padding:max(0px)){
+  .top{padding-top:env(safe-area-inset-top)}
+  .navrow,.scorebar{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
