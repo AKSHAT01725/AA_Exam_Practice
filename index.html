@@ -357,13 +357,27 @@ details.fold .rich{padding:0 14px 12px;font-size:14px}
 .adm .err{background:var(--badSoft);color:var(--bad);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:13.5px}
 .adm .stats{grid-template-columns:repeat(4,1fr)}
 @media(max-width:700px){.adm .stats{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== PDF library ===== */
+.pdfwrap{padding:26px 0 40px}
+.pdfwrap h1{font-family:Fraunces,serif;font-size:30px;margin:0 0 4px}
+.pdfsub{color:var(--muted);margin:0 0 16px}
+.pdfsearch{width:100%;max-width:420px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 14px;font:inherit;margin-bottom:16px}
+.pdfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.pdfcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.pdfcard .ic{width:42px;height:42px;border-radius:12px;background:var(--brandSoft);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:.04em}
+.pdfcard h3{font-size:17px;margin:2px 0 0;line-height:1.3}
+.pdfcard p{margin:0;color:var(--muted);font-size:13.5px;flex:1}
+.pdfcard small{color:var(--muted);font-size:12px}
+.pdfopen{display:inline-block;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--brand),#5b3fc4);color:#fff;font-weight:750;border-radius:11px;padding:10px 14px;margin-top:4px}
+.pdfmsg{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
   <button class="logo" data-act="home" aria-label="Home"><span class="mark">Y</span><span>AA Exam Practice<small>Yates Education · Audit &amp; Assurance</small></span></button>
   <div class="spacer"></div>
-  <span id="topExtra"></span><button id="accountLaunch" class="account-launch" type="button"><span class="dot"></span><span id="accountLaunchText">Account / Cloud Save</span></button><div class="tabs" id="tabs"><button data-act="home" data-tab="home">Practice</button><button data-act="report" data-tab="report">Scoreboard</button><button data-act="hub" data-tab="hub">ACCA Study Hub</button></div>
+  <span id="topExtra"></span><button id="accountLaunch" class="account-launch" type="button"><span class="dot"></span><span id="accountLaunchText">Account / Cloud Save</span></button><div class="tabs" id="tabs"><button data-act="home" data-tab="home">Practice</button><button data-act="report" data-tab="report">Scoreboard</button><button id="pdfTab" data-tab="pdf" data-pdf="open">PDFs</button><button data-act="hub" data-tab="hub">ACCA Study Hub</button></div>
   <button class="iconbtn" data-act="theme" title="Toggle light/dark" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
 </div></header>
 <main id="app" class="wrap"></main>
@@ -558,7 +572,7 @@ function statsFor(ns){
   return {ok,no,fl,total:ns.length,done:ok+no};
 }
 
-function secSwitch(){ return `<div class="secsw"><button class="${ST.sec!=='B'?'on':''}" data-act="sec" data-s="A">Section A<small>OT case questions</small></button><button class="${ST.sec==='B'?'on':''}" data-act="sec" data-s="B">Section B<small>Constructed response</small></button></div>`; }
+function secSwitch(){ return `<div class="secsw"><button class="${ST.sec!=='B'?'on':''}" data-act="sec" data-s="A">Section A<small>OT case questions</small></button><button class="${ST.sec==='B'?'on':''}" data-act="sec" data-s="B">Section B<small>Constructed response</small></button><button data-pdf="open">PDFs<small>Study material</small></button></div>`; }
 function nameLine(){ return `<div style="margin:-2px 0 10px;font-size:14px">👤 ${ST.name?'<b>'+esc(ST.name)+'</b>':'<span style="color:var(--muted)">No name set</span>'} · <button class="rlink" data-act="name">${ST.name?'change':'add your name'}</button>${SYNC_URL?' · <span style="color:var(--ok)">● scores saved for your tutor</span>':''}</div>`; }
 function renderHome(){
   setActive(null); view='home'; setTabs('home'); stopTimer(); setTopExtra('');
@@ -1392,6 +1406,46 @@ function friendlyError(e){
     'unavailable':'Firestore is unreachable right now. Check your connection.'
   };
   return map[c]||(e&&e.message)||'Something went wrong.';
+}
+
+/* ---------- PDF library (students) ---------- */
+const pdfTab=document.getElementById('pdfTab');
+const pdfS={items:null,q:'',err:'',loading:false};
+const safeUrl=u=>{u=String(u||'').trim(); return (/^https?:\/\/\S+$/i.test(u)||(u&&!/^[a-z][a-z0-9+.\-]*:/i.test(u)&&!u.startsWith('//')&&!/\s/.test(u)))?u:'#';};
+const fmtSize=b=>b?(b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB'):'';
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-pdf="open"]')) openPdfs();
+  else if(e.target.closest('[data-pdf="login"]')) showLayer();
+});
+document.addEventListener('input',e=>{ if(e.target&&e.target.id==='pdfSearch'){ pdfS.q=e.target.value; drawPdfList(); } });
+function drawPdfs(msgHtml){
+  document.getElementById('app').innerHTML=`<section class="pdfwrap"><h1>PDF library</h1><p class="pdfsub">Study material shared by your tutor. Open a document in a new tab to read or download it.</p>`+
+    (msgHtml?`<div class="pdfmsg">${msgHtml}</div>`:`<input class="pdfsearch" id="pdfSearch" placeholder="Search PDFs…" value="${esc(pdfS.q)}"><div id="pdfList"></div>`)+`</section>`;
+  if(!msgHtml) drawPdfList();
+}
+function drawPdfList(){
+  const box=document.getElementById('pdfList'); if(!box) return;
+  if(pdfS.loading){ box.innerHTML='<div class="pdfmsg">Loading…</div>'; return; }
+  if(pdfS.err){ box.innerHTML=`<div class="pdfmsg">${esc(pdfS.err)}</div>`; return; }
+  const q=pdfS.q.trim().toLowerCase();
+  const list=(pdfS.items||[]).filter(x=>!q||((x.title||'')+' '+(x.description||'')).toLowerCase().includes(q));
+  if(!list.length){ box.innerHTML=`<div class="pdfmsg">${(pdfS.items||[]).length?'No PDFs match your search.':'No PDFs have been added yet. Check back soon.'}</div>`; return; }
+  box.innerHTML='<div class="pdfgrid">'+list.map(x=>{
+    const d=x.createdAt&&x.createdAt.toMillis?new Date(x.createdAt.toMillis()).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
+    return `<article class="pdfcard"><div class="ic">PDF</div><h3>${esc(x.title||x.fileName||'Untitled')}</h3><p>${esc(x.description||'')}</p><small>${[fmtSize(x.size),d].filter(Boolean).join(' · ')}</small><a class="pdfopen" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">Open PDF</a></article>`;}).join('')+'</div>';
+}
+async function openPdfs(){
+  if(hooks().pause) hooks().pause();
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b===pdfTab));
+  document.getElementById('topExtra').innerHTML=''; window.scrollTo(0,0);
+  if(!db){ drawPdfs('The PDF library needs the website to be connected to Firebase.'); return; }
+  if(!user){ drawPdfs('Please sign in with Google to open the PDF library.<br><br><button class="pdfopen" data-pdf="login" style="border:0;cursor:pointer">Sign in</button>'); return; }
+  pdfS.loading=true; pdfS.err=''; drawPdfs();
+  try{
+    const snap=await FB.getDocs(FB.query(FB.collection(db,'pdfs'),FB.orderBy('createdAt','desc')));
+    pdfS.items=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){ console.error(e); pdfS.err=friendlyError(e); }
+  pdfS.loading=false; drawPdfList();
 }
 
 /* ---------- start ---------- */
