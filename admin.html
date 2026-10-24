@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin · AA Exam Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f2ee; --surface:#ffffff; --surface2:#f8f7f4; --ink:#16181d; --muted:#5f6573; --line:#e3e0d8;
+  --brand:#1f3a8a; --brand2:#3651c9; --brandSoft:#e8ecfb;
+  --ok:#0f8a5f; --okSoft:#e3f5ec; --bad:#c2372f; --badSoft:#fbe9e7;
+  --flag:#d97706; --flagSoft:#fdf1dc; --shadow:0 1px 2px rgba(20,20,30,.05),0 8px 24px rgba(20,20,30,.06);
+  --r:14px;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#171a21; --surface2:#1d212a; --ink:#eceef3; --muted:#9aa1b0; --line:#2a2f3a;
+  --brand:#8ea2ff; --brand2:#a9b8ff; --brandSoft:#1f2640;
+  --ok:#3fcf8e; --okSoft:#123024; --bad:#ff7a70; --badSoft:#3a1b1a; --flag:#f5a524; --flagSoft:#3a2a0f;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1115; --surface:#171a21; --surface2:#1d212a; --ink:#eceef3; --muted:#9aa1b0; --line:#2a2f3a;
+    --brand:#8ea2ff; --brand2:#a9b8ff; --brandSoft:#1f2640;
+    --ok:#3fcf8e; --okSoft:#123024; --bad:#ff7a70; --badSoft:#3a1b1a; --flag:#f5a524; --flagSoft:#3a2a0f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+h1,h2,h3{margin:0;line-height:1.2}
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:60px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800}
+.logo .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#6d4bd8);color:#fff;display:grid;place-items:center;font-family:Fraunces,serif;font-size:17px}
+.logo small{display:block;font-weight:500;color:var(--muted);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.spacer{flex:1}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:700;background:var(--brand);color:#fff}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:wait}
+.rlink{background:none;border:0;padding:0;color:var(--brand);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:24px;letter-spacing:-.02em}
+.stat span{color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.s{background:var(--okSoft);color:var(--ok)} .pill.w{background:var(--badSoft);color:var(--bad)}
+.gate{max-width:420px;margin:12vh auto;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow);text-align:center}
+.gate h2{font-family:Fraunces,serif;font-size:26px;margin-bottom:8px}
+.gate p{color:var(--muted);margin:0 0 18px}
+.gate .msg{margin-top:14px;font-size:13.5px;color:var(--bad)}
+.chip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.chip img{width:28px;height:28px;border-radius:50%}
+.adm h2{font-family:Fraunces,serif;font-size:26px;margin:22px 0 4px}
+.adm .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+.adm .bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.adm .bar2 input,.adm .bar2 select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 10px;font:inherit;font-size:13.5px}
+.adm .bar2 .grow{flex:1;min-width:160px}
+.adm .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.adm .card h3{font-size:17px;margin-bottom:10px}
+.adm .tablewrap{overflow-x:auto}
+.adm table{width:100%;border-collapse:collapse;font-size:13.5px}
+.adm th{text-align:left;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.adm td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.adm td.num,.adm th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.adm tr.click{cursor:pointer}
+.adm tr.click:hover td{background:var(--surface2)}
+.adm .who{display:flex;align-items:center;gap:10px}
+.adm .who img,.adm .who .av{width:30px;height:30px;border-radius:50%;flex:none;background:var(--brandSoft);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:12px;object-fit:cover}
+.adm .who small{display:block;color:var(--muted);font-size:12px}
+.adm .muted{color:var(--muted)}
+.adm .err{background:var(--badSoft);color:var(--bad);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:13.5px}
+.adm .stats{grid-template-columns:repeat(4,1fr)}
+@media(max-width:700px){.adm .stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="logo"><span class="mark">Y</span><span>AA Exam Practice<small>Admin console</small></span></div>
+  <div class="spacer"></div>
+  <div id="who" style="display:flex;align-items:center;gap:10px"></div>
+</div></header>
+<main id="app" class="wrap"><div class="gate"><p>Loading…</p></div></main>
+<script type="module">
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDZVvHO_hlM51j2qTeGKfGLpH8t_YTSLDU",
+  authDomain: "aa-exam-practice.firebaseapp.com",
+  projectId: "aa-exam-practice",
+  storageBucket: "aa-exam-practice.firebasestorage.app",
+  messagingSenderId: "348006785291",
+  appId: "1:348006785291:web:621592fb02be5a24cf020e",
+  measurementId: "G-LJE8YG75GL"
+};
+// Must match ADMIN_EMAILS in index.html and isAdmin() in firestore.rules (lowercase).
+const ADMIN_EMAILS = ['your-admin@gmail.com'];
+
+const $=id=>document.getElementById(id);
+const appEl=$('app');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const adminEmails=ADMIN_EMAILS.map(e=>String(e).trim().toLowerCase());
+const isAdmin=u=>!!(u&&u.email&&adminEmails.includes(u.email.toLowerCase()));
+let FB=null, auth=null, db=null, user=null;
+
+function friendlyError(e){
+  const c=(e&&e.code)||'';
+  const map={
+    'auth/unauthorized-domain':"This website's domain isn't authorised. Firebase Console → Authentication → Settings → Authorized domains → add it.",
+    'auth/operation-not-allowed':"Google sign-in isn't enabled. Firebase Console → Authentication → Sign-in method → enable Google.",
+    'auth/network-request-failed':'Network error. Check your internet connection.',
+    'auth/too-many-requests':'Too many attempts. Wait a little and try again.',
+    'permission-denied':'Firestore denied access. Publish firestore.rules and make sure your email is listed as admin there.',
+    'unavailable':'Firestore is unreachable right now. Check your connection.'
+  };
+  return map[c]||(e&&e.message)||'Something went wrong.';
+}
+
+function gate(title,text,btn){
+  appEl.innerHTML=`<div class="gate"><h2>${esc(title)}</h2><p>${esc(text)}</p>${btn||''}<div class="msg" id="gmsg"></div></div>`;
+  const g=$('gBtn'); if(g) g.addEventListener('click',signIn);
+  const o=$('outBtn'); if(o) o.addEventListener('click',()=>FB.signOut(auth));
+}
+const GBTN=`<button class="btn" id="gBtn" style="display:inline-flex;align-items:center;gap:10px;padding:12px 18px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Sign in with Google</span></button>`;
+async function signIn(){
+  const b=$('gBtn'); b.disabled=true;
+  try{ const p=new FB.GoogleAuthProvider(); p.setCustomParameters({prompt:'select_account'}); await FB.signInWithPopup(auth,p); }
+  catch(e){ if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request') $('gmsg').textContent=friendlyError(e); }
+  finally{ b.disabled=false; }
+}
+function renderUser(){
+  const box=$('who');
+  if(!user){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="chip">${user.photoURL?`<img src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer">`:''}<span>${esc(user.email)}</span></div><button class="btn ghost" id="outTop">Sign out</button>`;
+  $('outTop').addEventListener('click',()=>FB.signOut(auth));
+}
+async function onAuth(u){
+  user=u; renderUser();
+  if(!u){ gate('Admin sign-in','Sign in with the Google account that has admin access.',GBTN); return; }
+  if(!isAdmin(u)){ gate('Not authorised',`${u.email} does not have admin access.`,'<button class="btn ghost" id="outBtn">Sign out</button>'); return; }
+  appEl.innerHTML='<div class="gate"><p>Loading…</p></div>';
+  loadStudents();
+}
+
+/* ---------- admin panel (shared logic) ---------- */
+const fmtT=s=>{s=Math.max(0,Math.round(s||0));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}h ${String(m).padStart(2,'0')}m`:m?`${m}m ${String(x).padStart(2,'0')}s`:`${x}s`;};
+const when=ms=>ms?new Date(ms).toLocaleString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+const whenShort=ms=>ms?new Date(ms).toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'—';
+const tsMs=v=>v&&v.toMillis?v.toMillis():(v?(typeof v==='number'?v:Date.parse(v)||0):0);
+const pct=(a,b)=>b?Math.round(a/b*100):null;
+const pctTxt=v=>v==null?'—':v+'%';
+const adm={active:true,students:[],sel:null,rows:[],loading:false,err:'',q:'',sort:'active',f:{sec:'',topic:'',q:''},limit:100};
+
+function adminError(e){ return (e&&e.code==='permission-denied')?'Firestore denied access. Publish firestore.rules and make sure your admin email is listed in both ADMIN_EMAILS and the rules.':friendlyError(e); }
+function dl(name,rows){
+  const csv=rows.map(r=>r.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
+  a.download=name; document.body.appendChild(a); a.click(); a.remove();
+}
+async function loadStudents(){
+  adm.loading=true; adm.err=''; renderAdmin();
+  try{ const snap=await FB.getDocs(FB.collection(db,'users')); adm.students=snap.docs.map(d=>({id:d.id,...d.data()})).filter(s=>s.email); }
+  catch(e){ console.error(e); adm.err=adminError(e); }
+  adm.loading=false; renderAdmin();
+}
+async function openStudent(id){
+  const s=adm.students.find(x=>x.id===id); if(!s) return;
+  adm.sel=s; adm.rows=[]; adm.f={sec:'',topic:'',q:''}; adm.limit=100; adm.loading=true; adm.err=''; renderAdmin(); window.scrollTo(0,0);
+  try{
+    const snap=await FB.getDocs(FB.query(FB.collection(db,'attempts'),FB.where('uid','==',id)));
+    adm.rows=snap.docs.map(d=>d.data()).sort((a,b)=>(b.t||0)-(a.t||0));
+  }catch(e){ console.error(e); adm.err=adminError(e); }
+  adm.loading=false; renderAdmin();
+}
+const sName=s=>s.student||s.displayName||s.email;
+const sActive=s=>Math.max(s.lastActivityAt||0,tsMs(s.lastSeenAt));
+function avatar(s){ return s.photoURL?`<img src="${esc(s.photoURL)}" alt="" referrerpolicy="no-referrer">`:`<span class="av">${esc((sName(s)||'?').trim().charAt(0).toUpperCase())}</span>`; }
+
+function renderAdmin(){
+  adm.active=true;
+  let h=`<div class="adm">`;
+  if(adm.err) h+=`<div class="err">${esc(adm.err)}</div>`;
+  if(adm.sel) h+=studentHTML(); else h+=listHTML();
+  appEl.innerHTML=h+`</div>`;
+  if(!adm.sel) renderList(); else renderRows();
+}
+function listHTML(){
+  const st=adm.students, week=Date.now()-7*864e5;
+  const act=st.filter(s=>sActive(s)>week).length;
+  const att=st.reduce((a,s)=>a+((s.stats&&(s.stats.aN+s.stats.bN))||0),0);
+  const time=st.reduce((a,s)=>a+((s.stats&&s.stats.totalSecs)||0),0);
+  return `<h2>Admin · Student activity</h2><p class="sub">Everyone who has signed in with Google, what they practised and how long it took. Click a student for the full question-by-question log.</p>
+  <div class="stats"><div class="stat"><b>${st.length}</b><span>Students signed in</span></div><div class="stat"><b>${act}</b><span>Active in last 7 days</span></div><div class="stat"><b>${att}</b><span>Questions attempted</span></div><div class="stat"><b>${fmtT(time)}</b><span>Total practice time</span></div></div>
+  <div class="bar2"><input class="grow" id="admQ" data-admf="q" placeholder="Search name or email…" value="${esc(adm.q)}">
+    <select data-admf="sort"><option value="active"${adm.sort==='active'?' selected':''}>Sort: last active</option><option value="time"${adm.sort==='time'?' selected':''}>Sort: total time</option><option value="qs"${adm.sort==='qs'?' selected':''}>Sort: questions attempted</option><option value="name"${adm.sort==='name'?' selected':''}>Sort: name</option></select>
+    <button class="btn ghost" data-adm="refresh">↻ Refresh</button><button class="btn ghost" data-adm="csvAll">⬇ Export CSV</button></div>
+  <div class="card"><div class="tablewrap" id="admList">${adm.loading?'<p class="muted">Loading…</p>':''}</div></div>`;
+}
+function sortedStudents(){
+  const q=adm.q.trim().toLowerCase();
+  let r=adm.students.filter(s=>!q||(sName(s)+' '+s.email).toLowerCase().includes(q));
+  const tot=s=>(s.stats&&s.stats.totalSecs)||0, qs=s=>s.stats?s.stats.aN+s.stats.bN:0;
+  const f={active:(a,b)=>sActive(b)-sActive(a),time:(a,b)=>tot(b)-tot(a),qs:(a,b)=>qs(b)-qs(a),name:(a,b)=>sName(a).localeCompare(sName(b))}[adm.sort];
+  return r.sort(f);
+}
+function renderList(){
+  const box=$('admList'); if(!box||adm.loading) return;
+  const r=sortedStudents();
+  if(!r.length){ box.innerHTML='<p class="muted">No students found yet.</p>'; return; }
+  box.innerHTML=`<table><thead><tr><th>Student</th><th>Last login</th><th>Last active</th><th class="num">Section A</th><th class="num">A time</th><th class="num">Section B</th><th class="num">B time</th><th class="num">Total time</th></tr></thead><tbody>`+
+  r.map(s=>{const t=s.stats||{aN:0,aOk:0,aSecs:0,bN:0,bScore:0,bMax:0,bSecs:0,totalSecs:0};
+    return `<tr class="click" data-adm="open" data-id="${esc(s.id)}"><td><div class="who">${avatar(s)}<div><b>${esc(sName(s))}</b><small>${esc(s.email)}</small></div></div></td>
+    <td>${whenShort(tsMs(s.lastLoginAt))}</td><td>${whenShort(sActive(s))}</td>
+    <td class="num">${t.aN} <span class="muted">· ${pctTxt(pct(t.aOk,t.aN))}</span></td><td class="num">${fmtT(t.aSecs)}</td>
+    <td class="num">${t.bN} <span class="muted">· ${pctTxt(pct(t.bScore,t.bMax))}</span></td><td class="num">${fmtT(t.bSecs)}</td><td class="num"><b>${fmtT(t.totalSecs)}</b></td></tr>`;}).join('')+`</tbody></table>`;
+}
+function topicTable(rows){
+  const m=new Map();
+  rows.forEach(r=>{ const t=r.topic||'(none)'; let x=m.get(t); if(!x){x={A:{n:0,ok:0,s:0},B:{n:0,sc:0,mx:0,s:0}};m.set(t,x);}
+    if(r.section==='B'){x.B.n++;x.B.sc+=r.score||0;x.B.mx+=r.max||0;x.B.s+=r.secs||0;} else {x.A.n++;x.A.ok+=r.correct?1:0;x.A.s+=r.secs||0;} });
+  const list=[...m.entries()].sort((a,b)=>(b[1].A.s+b[1].B.s)-(a[1].A.s+a[1].B.s));
+  if(!list.length) return '<p class="muted">No attempts yet.</p>';
+  const tot={aN:0,aOk:0,aS:0,bN:0,bSc:0,bMx:0,bS:0};
+  const body=list.map(([t,x])=>{tot.aN+=x.A.n;tot.aOk+=x.A.ok;tot.aS+=x.A.s;tot.bN+=x.B.n;tot.bSc+=x.B.sc;tot.bMx+=x.B.mx;tot.bS+=x.B.s;
+    return `<tr><td>${esc(t)}</td><td class="num">${x.A.n||'—'}</td><td class="num">${x.A.n?pct(x.A.ok,x.A.n)+'%':'—'}</td><td class="num">${x.A.n?fmtT(x.A.s):'—'}</td><td class="num">${x.A.n?fmtT(x.A.s/x.A.n):'—'}</td>
+    <td class="num">${x.B.n||'—'}</td><td class="num">${x.B.mx?pct(x.B.sc,x.B.mx)+'%':'—'}</td><td class="num">${x.B.n?fmtT(x.B.s):'—'}</td><td class="num"><b>${fmtT(x.A.s+x.B.s)}</b></td></tr>`;}).join('');
+  return `<div class="tablewrap"><table><thead><tr><th>Topic</th><th class="num">A · Qs</th><th class="num">A · Correct</th><th class="num">A · Time</th><th class="num">A · Avg/Q</th><th class="num">B · Qs</th><th class="num">B · Score</th><th class="num">B · Time</th><th class="num">Total time</th></tr></thead><tbody>${body}
+  <tr><td><b>All topics</b></td><td class="num"><b>${tot.aN}</b></td><td class="num"><b>${tot.aN?pct(tot.aOk,tot.aN)+'%':'—'}</b></td><td class="num"><b>${fmtT(tot.aS)}</b></td><td class="num"><b>${tot.aN?fmtT(tot.aS/tot.aN):'—'}</b></td><td class="num"><b>${tot.bN}</b></td><td class="num"><b>${tot.bMx?pct(tot.bSc,tot.bMx)+'%':'—'}</b></td><td class="num"><b>${fmtT(tot.bS)}</b></td><td class="num"><b>${fmtT(tot.aS+tot.bS)}</b></td></tr></tbody></table></div>`;
+}
+function studentHTML(){
+  const s=adm.sel, R=adm.rows;
+  const aS=R.filter(r=>r.section!=='B'), bS=R.filter(r=>r.section==='B');
+  const aT=aS.reduce((a,r)=>a+(r.secs||0),0), bT=bS.reduce((a,r)=>a+(r.secs||0),0);
+  const topics=[...new Set(R.map(r=>r.topic).filter(Boolean))].sort();
+  return `<p style="margin:18px 0 0"><button class="rlink" data-adm="back">← All students</button></p>
+  <div class="who" style="margin:10px 0 4px">${avatar(s).replace('class="av"','class="av" style="width:44px;height:44px;font-size:16px"').replace('<img ','<img style="width:44px;height:44px" ')}<div><h2 style="margin:0">${esc(sName(s))}</h2><span class="muted">${esc(s.email)}</span></div></div>
+  <p class="sub">Member since ${whenShort(tsMs(s.createdAtAuth))} · last login ${when(tsMs(s.lastLoginAt))} · last active ${when(sActive(s))}</p>
+  <div class="stats"><div class="stat"><b>${fmtT(aT+bT)}</b><span>Total time on questions</span></div><div class="stat"><b>${fmtT(aT)}</b><span>Section A · ${aS.length} attempts${aS.length?' · '+pct(aS.filter(r=>r.correct).length,aS.length)+'% correct':''}</span></div><div class="stat"><b>${fmtT(bT)}</b><span>Section B · ${bS.length} submissions${bS.length?' · '+pctTxt(pct(bS.reduce((a,r)=>a+(r.score||0),0),bS.reduce((a,r)=>a+(r.max||0),0))):''}</span></div><div class="stat"><b>${aS.length?fmtT(aT/aS.length):'—'}</b><span>Average per Section A question</span></div></div>
+  <div class="card"><h3>Time by topic &amp; section</h3>${adm.loading?'<p class="muted">Loading…</p>':topicTable(R)}</div>
+  <div class="card"><h3>Question log</h3>
+    <div class="bar2"><input class="grow" data-admf="fq" placeholder="Search question, case or topic…" value="${esc(adm.f.q)}">
+      <select data-admf="fsec"><option value="">All sections</option><option value="A"${adm.f.sec==='A'?' selected':''}>Section A</option><option value="B"${adm.f.sec==='B'?' selected':''}>Section B</option></select>
+      <select data-admf="ftopic"><option value="">All topics</option>${topics.map(t=>`<option${adm.f.topic===t?' selected':''}>${esc(t)}</option>`).join('')}</select>
+      <button class="btn ghost" data-adm="refresh">↻</button><button class="btn ghost" data-adm="csvOne">⬇ CSV</button></div>
+    <div class="tablewrap" id="admRows"></div></div>`;
+}
+function filteredRows(){
+  const q=adm.f.q.trim().toLowerCase();
+  return adm.rows.filter(r=>(!adm.f.sec||(r.section||'A')===adm.f.sec)&&(!adm.f.topic||r.topic===adm.f.topic)&&(!q||[r.qLabel,r.title,r.topic,r.qType].join(' ').toLowerCase().includes(q)));
+}
+function renderRows(){
+  const box=$('admRows'); if(!box) return;
+  if(adm.loading){ box.innerHTML='<p class="muted">Loading…</p>'; return; }
+  const r=filteredRows();
+  if(!r.length){ box.innerHTML='<p class="muted">No attempts match.</p>'; return; }
+  box.innerHTML=`<table><thead><tr><th>Date &amp; time</th><th>Section</th><th>Topic</th><th>Case / question set</th><th>Question</th><th>Mode</th><th>Result</th><th class="num">Time taken</th></tr></thead><tbody>`+
+  r.slice(0,adm.limit).map(x=>{
+    const isB=x.section==='B';
+    const res=isB?`${x.score}/${x.max} <span class="muted">(${pct(x.score,x.max)}%)</span>`:(x.correct?'<span class="pill s">Correct</span>':'<span class="pill w">Wrong</span>');
+    const over=x.allowed&&x.secs>x.allowed;
+    return `<tr><td style="white-space:nowrap">${whenShort(x.t)}</td><td>${isB?'B':'A'}</td><td>${esc(x.topic)}</td><td>${esc(x.title)}</td><td style="white-space:nowrap">${esc(x.qLabel)}</td><td>${esc(x.mode)}</td><td>${res}</td><td class="num"${over?' style="color:var(--flag)" title="Over the exam-pace allowance of '+fmtT(x.allowed)+'"':''}>${fmtT(x.secs)}</td></tr>`;}).join('')+
+  `</tbody></table><p class="muted" style="margin:10px 2px 0;font-size:13px">Showing ${Math.min(adm.limit,r.length)} of ${r.length}. Orange time = over the exam-pace allowance.${r.length>adm.limit?` <button class="rlink" data-adm="more">Show more</button>`:''}</p>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-adm]'); if(!b||!adm.active) return;
+  switch(b.dataset.adm){
+    case 'open': openStudent(b.dataset.id); break;
+    case 'back': adm.sel=null; renderAdmin(); break;
+    case 'refresh': adm.sel?openStudent(adm.sel.id):loadStudents(); break;
+    case 'more': adm.limit+=200; renderRows(); break;
+    case 'csvAll': dl(`students_${new Date().toISOString().slice(0,10)}.csv`,[['Name','Email','Last login','Last active','Section A attempts','Section A correct','Section A time (s)','Section B submissions','Section B score','Section B max','Section B time (s)','Total time (s)']].concat(sortedStudents().map(s=>{const t=s.stats||{};return [sName(s),s.email,when(tsMs(s.lastLoginAt)),when(sActive(s)),t.aN||0,t.aOk||0,t.aSecs||0,t.bN||0,t.bScore||0,t.bMax||0,t.bSecs||0,t.totalSecs||0];}))); break;
+    case 'csvOne': dl(`${(sName(adm.sel)||'student').replace(/\W+/g,'_')}_attempts.csv`,[['Student','Email','Date/time','Section','Topic','Case / set','Question','Question style','Mode','Correct (A)','Score (B)','Out of (B)','Time taken (s)','Allowed (s)','Marks by part (B)']].concat(filteredRows().map(x=>[sName(adm.sel),adm.sel.email,new Date(x.t).toLocaleString(),x.section||'A',x.topic,x.title,x.qLabel,x.qType,x.mode,x.section==='B'?'':(x.correct?'Yes':'No'),x.section==='B'?x.score:'',x.section==='B'?x.max:'',x.secs,x.allowed||'',x.parts||'']))); break;
+  }
+});
+document.addEventListener('input',e=>{
+  const k=e.target&&e.target.dataset&&e.target.dataset.admf; if(!k||!adm.active) return;
+  const v=e.target.value;
+  if(k==='q'){adm.q=v;renderList();} else if(k==='sort'){adm.sort=v;renderList();}
+  else if(k==='fq'){adm.f.q=v;adm.limit=100;renderRows();} else if(k==='fsec'){adm.f.sec=v;adm.limit=100;renderRows();} else if(k==='ftopic'){adm.f.topic=v;adm.limit=100;renderRows();}
+});
+
+
+/* ---------- start ---------- */
+try{
+  const base='https://www.gstatic.com/firebasejs/10.14.1/';
+  const [A,Au,Fs]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-firestore.js')]);
+  FB={...A,...Au,...Fs};
+  const app=FB.getApps().length?FB.getApps()[0]:FB.initializeApp(FIREBASE_CONFIG);
+  auth=FB.getAuth(app); db=FB.getFirestore(app);
+  FB.onAuthStateChanged(auth,onAuth);
+}catch(e){ console.error(e); gate('Could not connect','Firebase failed to load: '+friendlyError(e),''); }
+</script>
+</body>
+</html>
