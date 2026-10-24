@@ -1308,7 +1308,7 @@ async function flushPending(){
     await pushState(p.raw,p.rev);
     await queueAttempts(JSON.parse(p.raw),false);
     statusEl.textContent='● Saved to cloud';
-  }catch(e){ console.error(e); statusEl.textContent='Cloud save failed · check connection'; }
+  }catch(e){ console.error(e); statusEl.textContent='Cloud save failed · '+((e&&e.code)||'check connection'); }
 }
 window.addEventListener('aa-state-save',e=>{
   const st=e.detail&&e.detail.state; if(!st) return;
@@ -1342,20 +1342,31 @@ async function syncAttempts(state,force){
   if(!user||!db||!state||!hooks().describe) return;
   const D=hooks().describe, key=SENT_PREFIX+user.uid;
   let sent; try{sent=new Set(JSON.parse(localStorage.getItem(key)||'[]'))}catch{sent=new Set()}
-  const items=[];
-  (state.log||[]).forEach(l=>{const k='a'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('A',l); if(d) items.push([k,d]);}});
-  (state.blog||[]).forEach(l=>{const k='b'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('B',l); if(d) items.push([k,d]);}});
-  if(!items.length&&!force) return;
+  const aItems=[], bItems=[];
+  (state.log||[]).forEach(l=>{const k='a'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('A',l); if(d) aItems.push([k,d]);}});
+  (state.blog||[]).forEach(l=>{const k='b'+l.t+'_'+l.n; if(!sent.has(k)){const d=D('B',l); if(d) bItems.push([k,d]);}});
+  if(!aItems.length&&!bItems.length&&!force) return;
   const base={uid:user.uid,email:(user.email||'').toLowerCase(),student:state.name||user.displayName||''};
   const stats=computeStats(state);
-  const chunks=[]; for(let i=0;i<items.length;i+=400) chunks.push(items.slice(i,i+400)); if(!chunks.length) chunks.push([]);
-  for(let c=0;c<chunks.length;c++){
-    const b=FB.writeBatch(db);
-    chunks[c].forEach(([k,d])=>b.set(FB.doc(db,'attempts',user.uid+'_'+k),{...base,...d}));
-    if(c===chunks.length-1) b.set(FB.doc(db,'users',user.uid),{student:base.student,stats,statsAt:FB.serverTimestamp(),lastActivityAt:stats.lastActivity||0},{merge:true});
-    await b.commit();
-    chunks[c].forEach(([k])=>sent.add(k)); localStorage.setItem(key,JSON.stringify([...sent]));
+  const remember=k=>{ sent.add(k); localStorage.setItem(key,JSON.stringify([...sent])); };
+  const clean=o=>JSON.parse(JSON.stringify(o));            // strips undefined/NaN so Firestore never rejects a field
+  let firstErr=null;
+  // Section A: batched, as before. A failure here no longer blocks Section B (and vice versa).
+  for(let i=0;i<aItems.length;i+=400){
+    const chunk=aItems.slice(i,i+400), b=FB.writeBatch(db);
+    chunk.forEach(([k,d])=>b.set(FB.doc(db,'attempts',user.uid+'_'+k),clean({...base,...d})));
+    try{ await b.commit(); chunk.forEach(([k])=>remember(k)); }
+    catch(e){ console.error('Section A attempt sync failed',e); firstErr=firstErr||e; }
   }
+  // Section B: one document per write, so a single rejected document can't take the others down with it.
+  for(const [k,d] of bItems){
+    try{ await FB.setDoc(FB.doc(db,'attempts',user.uid+'_'+k),clean({...base,...d})); remember(k); }
+    catch(e){ console.error('Section B attempt sync failed',k,d,e); firstErr=firstErr||e; }
+  }
+  // Student summary (shown in the admin student list) is always refreshed.
+  try{ await FB.setDoc(FB.doc(db,'users',user.uid),clean({student:base.student,stats,lastActivityAt:stats.lastActivity||0}),{merge:true}); await FB.setDoc(FB.doc(db,'users',user.uid),{statsAt:FB.serverTimestamp()},{merge:true}); }
+  catch(e){ console.error('Student stats sync failed',e); firstErr=firstErr||e; }
+  if(firstErr) throw firstErr;
 }
 function queueAttempts(s,f){ const p=attemptsChain.then(()=>syncAttempts(s,f)); attemptsChain=p.catch(()=>{}); return p; }
 
