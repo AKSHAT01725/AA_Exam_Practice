@@ -1236,6 +1236,9 @@ async function connect(config){
 async function onAuth(u){
   user=u; authReady=true; renderViews();
   if(!u) return;
+  try{ const ps=await FB.getDoc(FB.doc(db,'users',u.uid)); if(ps.exists()&&ps.data().banned===true){
+    try{ await FB.signOut(auth); }catch{}
+    msg('accountMessage','This account has been suspended. Please contact your tutor.','error'); layer.classList.add('show'); return; } }catch(e){ console.warn('ban check',e); }
   try{
     statusEl.textContent='Syncing your progress…';
     if(await restoreCloud(u)==='reload') return;
