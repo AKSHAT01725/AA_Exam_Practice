@@ -459,7 +459,7 @@ function renderRows(){
 }
 
 /* ---------- PDF library (links only) ---------- */
-const pdf={items:[],loading:false,err:'',busy:false};
+const pdf={items:[],loading:false,err:'',busy:false,edit:null};
 const okLink=u=>/^https?:\/\/\S+$/i.test(u)||(!/^[a-z][a-z0-9+.\-]*:/i.test(u)&&!u.startsWith('//')&&!/\s/.test(u)&&u.length>0);
 async function loadPdfs(){
   pdf.loading=true; pdf.err=''; renderPdfs();
@@ -470,8 +470,12 @@ async function loadPdfs(){
 function renderPdfs(){
   if(view!=='pdfs') return;
   const keep={t:($('pTitle')||{}).value||'',d:($('pDesc')||{}).value||'',u:($('pUrl')||{}).value||''};
-  const rows=pdf.items.map(x=>`<div class="prow"><div class="pic">PDF</div><div class="pmain"><b>${esc(x.title||'Untitled')}</b>${x.description?`<span>${esc(x.description)}</span>`:''}<span class="lnk">${esc(x.url||'')}</span></div>
-    <div class="pact"><a class="btn" href="${esc(okLink(x.url||'')?x.url:'#')}" target="_blank" rel="noopener">${ic('ext')}<span>Open</span></a><button class="btn danger" data-pdf="del" data-id="${esc(x.id)}">${ic('trash')}<span>Delete</span></button></div></div>`).join('');
+  const rows=pdf.items.map(x=>pdf.edit&&pdf.edit.id===x.id?`<div class="prow" style="flex-wrap:wrap;gap:10px"><div class="pic">PDF</div><div class="pmain" style="display:flex;flex-direction:column;gap:8px;min-width:240px;flex:1">\
+    <input data-pedit="title" placeholder="Title" value="${esc(pdf.edit.title)}" style="width:100%">\
+    <input data-pedit="description" placeholder="Description (optional)" value="${esc(pdf.edit.description)}" style="width:100%">\
+    <input data-pedit="url" placeholder="PDF link or path" value="${esc(pdf.edit.url)}" style="width:100%"></div>\
+    <div class="pact"><button class="btn primary" data-pdf="save" ${pdf.busy?'disabled':''}><span>${pdf.busy?'Saving…':'Save'}</span></button><button class="btn" data-pdf="cancel"><span>Cancel</span></button></div></div>`:`<div class="prow"><div class="pic">PDF</div><div class="pmain"><b>${esc(x.title||'Untitled')}</b>${x.description?`<span>${esc(x.description)}</span>`:''}<span class="lnk">${esc(x.url||'')}</span></div>
+    <div class="pact"><button class="btn" data-pdf="edit" data-id="${esc(x.id)}"><span>Edit</span></button><a class="btn" href="${esc(okLink(x.url||'')?x.url:'#')}" target="_blank" rel="noopener">${ic('ext')}<span>Open</span></a><button class="btn danger" data-pdf="del" data-id="${esc(x.id)}">${ic('trash')}<span>Delete</span></button></div></div>`).join('');
   appEl.innerHTML=ph('PDF library','Add links to PDFs. Signed-in students see them under PDFs in the navigation bar and beside Section A / B.')+
   (pdf.err?`<div class="err">${esc(pdf.err)}</div>`:'')+
   `<div class="card"><h3>Add a PDF</h3><div class="form">
@@ -493,6 +497,19 @@ async function addPdf(){
     pdf.busy=false; pdf.err=''; ['pTitle','pDesc','pUrl'].forEach(i=>{const el=$(i); if(el) el.value='';}); toast('PDF added'); await loadPdfs();
   }catch(e){ console.error(e); pdf.busy=false; pdf.err=friendlyError(e); renderPdfs(); }
 }
+function editPdf(id){ const x=pdf.items.find(i=>i.id===id); if(!x) return; pdf.edit={id,title:x.title||'',description:x.description||'',url:x.url||''}; renderPdfs(); }
+async function savePdfEdit(){
+  const ed=pdf.edit; if(!ed) return;
+  const title=ed.title.trim(), description=ed.description.trim(), url=ed.url.trim().replace(/^\.\//,'');
+  if(!title){ toast('Enter a title'); return; }
+  if(!url){ toast('Enter the PDF link or path'); return; }
+  if(!okLink(url)){ toast('Link must be https://… or a path like pdfs/file.pdf'); return; }
+  try{
+    pdf.busy=true; renderPdfs();
+    await FB.updateDoc(FB.doc(db,'pdfs',ed.id),{title,description,url,updatedAt:FB.serverTimestamp(),updatedBy:(user.email||'').toLowerCase()});
+    pdf.busy=false; pdf.edit=null; pdf.err=''; toast('PDF updated'); await loadPdfs();
+  }catch(e){ console.error(e); pdf.busy=false; pdf.err=friendlyError(e); renderPdfs(); }
+}
 async function delPdf(id){
   const x=pdf.items.find(i=>i.id===id); if(!x||!confirm('Remove "'+(x.title||'this PDF')+'" from the library?\n(The file itself stays in GitHub.)')) return;
   try{ await FB.deleteDoc(FB.doc(db,'pdfs',id)); pdf.err=''; toast('PDF removed'); await loadPdfs(); }
@@ -506,7 +523,7 @@ document.addEventListener('click',e=>{
   const nv=e.target.closest('[data-nav]');
   if(nv){ setNav(nv.dataset.nav); window.scrollTo(0,0); if(nv.dataset.nav==='students'){ adm.sel=null; loadStudents(); } else loadPdfs(); return; }
   const pd=e.target.closest('[data-pdf]');
-  if(pd){ if(pd.dataset.pdf==='add') addPdf(); else if(pd.dataset.pdf==='del') delPdf(pd.dataset.id); return; }
+  if(pd){ const k=pd.dataset.pdf; if(k==='add') addPdf(); else if(k==='del') delPdf(pd.dataset.id); else if(k==='edit') editPdf(pd.dataset.id); else if(k==='save') savePdfEdit(); else if(k==='cancel'){ pdf.edit=null; renderPdfs(); } return; }
   const b=e.target.closest('[data-adm]'); if(!b) return;
   switch(b.dataset.adm){
     case 'open': openStudent(b.dataset.id); break;
@@ -518,6 +535,7 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('input',e=>{
+  const pe=e.target&&e.target.dataset&&e.target.dataset.pedit; if(pe&&pdf.edit){ pdf.edit[pe]=e.target.value; return; }
   const k=e.target&&e.target.dataset&&e.target.dataset.admf; if(!k) return;
   const v=e.target.value;
   if(k==='q'){adm.q=v;renderList();} else if(k==='sort'){adm.sort=v;renderList();}
