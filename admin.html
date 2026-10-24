@@ -212,6 +212,28 @@ td small.sub2{display:block;color:var(--muted);font-size:11.5px}
   .prow{flex-wrap:wrap}.pact{width:100%}.pact .btn{flex:1}
 }
 @media(max-width:380px){ .kpis{grid-template-columns:1fr} }
+
+/* ---------- Section B marking ---------- */
+textarea{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:11px;padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;min-height:80px;resize:vertical}
+textarea:focus{outline:2px solid var(--brandSoft);border-color:var(--brand)}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--surface)}
+.seg2 button{border:0;background:none;padding:9px 14px;font-weight:700;color:var(--muted)}
+.seg2 button.on{background:var(--brand);color:#fff}
+:root[data-theme="dark"] .seg2 button.on{color:#0d0f14}
+.pill.p{background:var(--flagSoft);color:var(--flag)}
+.mkreq{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--surface)}
+.mkreq h4{margin:0 0 4px;font-size:15px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.mkq{color:var(--muted);white-space:pre-line;font-size:13.5px;margin-bottom:10px}
+.mkans{background:var(--surface2);border:1px dashed var(--line);border-radius:11px;padding:10px 12px;white-space:pre-wrap;font-size:14px;max-height:360px;overflow:auto;overflow-wrap:anywhere}
+.mklbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 6px}
+.mkmark{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.mkmark input{width:90px;font-weight:800;text-align:center}
+.mkfold{margin-top:10px;border:1px solid var(--line);border-radius:11px;background:var(--surface2)}
+.mkfold summary{padding:9px 12px;font-weight:700;cursor:pointer}
+.mkfold .in{padding:0 12px 12px;white-space:pre-wrap;font-size:13.5px;overflow-wrap:anywhere}
+.mkfold table{width:100%;border-collapse:collapse;font-size:13px}.mkfold td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}.mkfold td.m{text-align:right;white-space:nowrap;font-weight:700}
+.mkbar{position:sticky;bottom:0;z-index:5;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+@media(max-width:720px){.mkbar .btn{flex:1}.seg2{width:100%}.seg2 button{flex:1;padding:10px 6px}}
 </style>
 </head>
 <body>
@@ -220,6 +242,7 @@ td small.sub2{display:block;color:var(--muted);font-size:11.5px}
     <div class="brand"><span class="mark">Y</span><span>AA Exam Practice<small>Admin console</small></span></div>
     <nav class="navl" id="nav">
       <button data-nav="students"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Students</span></button>
+      <button data-nav="marking"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Section B marking <b id="mkBadge"></b></span></button>
       <button data-nav="pdfs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>PDF library</span></button>
     </nav>
     <div class="me" id="who"></div>
@@ -331,11 +354,11 @@ async function onAuth(u){
   user=u; renderUser();
   if(!u){ gate('Admin console','Sign in with the Google account that has admin access.',GBTN); return; }
   if(!isAdmin(u)){ gate('Not authorised',`${u.email} does not have admin access.`,`<button class="btn" data-act="out">${ic('out')}<span>Sign out</span></button>`); return; }
-  document.body.classList.add('authed'); setNav('students'); loadStudents();
+  document.body.classList.add('authed'); setNav('students'); loadStudents(); loadMarkingBadge();
 }
 
 /* ---------- students ---------- */
-const adm={students:[],sel:null,rows:[],loading:false,err:'',q:'',sort:'active',f:{sec:'',topic:'',q:''},limit:100};
+const adm={students:[],sel:null,rows:[],grades:{},loading:false,err:'',q:'',sort:'active',f:{sec:'',topic:'',q:''},limit:100};
 function adminError(e){ return (e&&e.code==='permission-denied')?'Firestore denied access. Publish firestore.rules and make sure your admin email is listed in the rules.':friendlyError(e); }
 const sName=s=>s.student||s.displayName||s.email;
 const sActive=s=>Math.max(s.lastActivityAt||0,tsMs(s.lastSeenAt));
@@ -412,7 +435,8 @@ async function openStudent(id){
   adm.sel=s; adm.rows=[]; adm.f={sec:'',topic:'',q:''}; adm.limit=100; adm.loading=true; adm.err=''; renderAdmin(); window.scrollTo(0,0);
   try{
     const snap=await FB.getDocs(FB.query(FB.collection(db,'attempts'),FB.where('uid','==',id)));
-    adm.rows=snap.docs.map(d=>d.data()).sort((a,b)=>(b.t||0)-(a.t||0));
+    adm.rows=snap.docs.map(d=>({...d.data(),_id:d.id})).sort((a,b)=>(b.t||0)-(a.t||0));
+    adm.grades={}; try{ const gs=await FB.getDocs(FB.query(FB.collection(db,'gradings'),FB.where('uid','==',id))); gs.docs.forEach(d=>{adm.grades[d.id]=d.data();}); }catch(e){ console.warn('gradings',e); }
   }catch(e){ console.error(e); adm.err=adminError(e); }
   adm.loading=false; renderAdmin();
 }
@@ -512,12 +536,86 @@ function renderRows(){
   box.innerHTML=`<div class="tw"><table class="rt"><thead><tr><th>Question</th><th>Date &amp; time</th><th>Section</th><th>Topic</th><th class="hm">Mode</th><th>Result</th><th class="num">Time taken</th></tr></thead><tbody>`+
   r.slice(0,adm.limit).map(x=>{
     const isB=x.section==='B';
-    const res=isB?(x.score==null?'<span class="pill w">Submitted · not marked</span>':`${x.score}/${x.max} <span class="muted">(${pct(x.score,x.max)}%)</span>`):(x.correct?'<span class="pill s">Correct</span>':'<span class="pill w">Wrong</span>');
+    const g=isB&&adm.grades&&adm.grades[x._id], sc=g?g.score:x.score;
+    const mkBtn=isB?` <button class="btn" style="padding:4px 10px;min-height:0" data-adm="grade" data-id="${esc(x._id)}">${g?'Review':'Mark'}</button>`:'';
+    const res=isB?((sc==null?'<span class="pill p">Awaiting marking</span>':`${sc}/${x.max} <span class="muted">(${pct(sc,x.max)}%)</span>`)+mkBtn):(x.correct?'<span class="pill s">Correct</span>':'<span class="pill w">Wrong</span>');
     const over=x.allowed&&x.secs>x.allowed;
     return `<tr><td class="primary"><b>${esc(x.qLabel)}</b> <span class="muted">· ${esc(x.title)}</span></td><td data-l="Date">${whenShort(x.t)}</td><td data-l="Section"><span class="tag ${isB?'b':'a'}">${isB?'B':'A'}</span></td><td data-l="Topic">${esc(x.topic)}</td><td class="hm" data-l="Mode">${esc(x.mode)}</td><td data-l="Result">${res}</td><td class="num${over?' over':''}" data-l="Time taken"${over?` title="Over the exam-pace allowance of ${fmtT(x.allowed)}"`:''}>${fmtT(x.secs)}${over?' ▲':''}</td></tr>`;}).join('')+
   `</tbody></table></div><p class="muted" style="margin:12px 2px 0;font-size:12.5px">Showing ${Math.min(adm.limit,r.length)} of ${r.length}. ▲ = over the exam-pace allowance.${r.length>adm.limit?` <button class="back" style="margin:0 0 0 6px" data-adm="more">Show more</button>`:''}</p>`;
   wrapCells(box);
 }
+
+/* ---------- Section B marking ---------- */
+const mk={items:[],grades:{},loading:false,err:'',filter:'pending',q:'',sel:null,back:'',busy:false};
+const mkGrade=r=>mk.grades[r._id]||null;
+const mkStatus=r=>mkGrade(r)?'marked':(r.score!=null?'legacy':'pending');
+async function loadMarkingBadge(){ try{ const a=await FB.getDocs(FB.query(FB.collection(db,'attempts'),FB.where('section','==','B'))); const g=await FB.getDocs(FB.collection(db,'gradings')); const gi=new Set(g.docs.map(d=>d.id)); const n=a.docs.filter(d=>!gi.has(d.id)&&d.data().score==null).length; const bd=$('mkBadge'); if(bd) bd.textContent=n?'('+n+')':''; }catch(e){} }
+async function loadMarking(){
+  setNav('marking'); mk.loading=true; mk.err=''; renderMarking();
+  try{
+    const a=await FB.getDocs(FB.query(FB.collection(db,'attempts'),FB.where('section','==','B')));
+    mk.items=a.docs.map(d=>({...d.data(),_id:d.id})).sort((x,y)=>(y.t||0)-(x.t||0));
+    mk.grades={}; const g=await FB.getDocs(FB.collection(db,'gradings')); g.docs.forEach(d=>{mk.grades[d.id]=d.data();});
+  }catch(e){ console.error(e); mk.err=adminError(e); }
+  mk.loading=false; const n=mk.items.filter(r=>mkStatus(r)==='pending').length; const bd=$('mkBadge'); if(bd) bd.textContent=n?'('+n+')':'';
+  renderMarking();
+}
+function renderMarking(){
+  if(view!=='marking') return;
+  if(mk.sel){ appEl.innerHTML=(mk.err?`<div class="err">${esc(mk.err)}</div>`:'')+markHTML(); return; }
+  const q=mk.q.trim().toLowerCase(), cnt={pending:0,marked:0};
+  mk.items.forEach(r=>{ if(mkStatus(r)==='pending') cnt.pending++; else cnt.marked++; });
+  const rows=mk.items.filter(r=>{ const st=mkStatus(r); return (mk.filter==='all'||(mk.filter==='pending'?st==='pending':st!=='pending'))&&(!q||[r.student,r.email,r.qLabel,r.title,r.topic].join(' ').toLowerCase().includes(q)); });
+  appEl.innerHTML=(mk.err?`<div class="err">${esc(mk.err)}</div>`:'')+
+  ph('Section B marking','Read each student\'s written answer, give marks per requirement and release them. Students only see marks (and the model answer) after you release them.',`<button class="btn" data-adm="mkrefresh">${ic('refresh')}<span>Refresh</span></button>`)+
+  `<div class="card"><div class="toolbar"><div class="seg2"><button data-adm="mkfilter" data-v="pending" class="${mk.filter==='pending'?'on':''}">Awaiting marking (${cnt.pending})</button><button data-adm="mkfilter" data-v="marked" class="${mk.filter==='marked'?'on':''}">Marked (${cnt.marked})</button><button data-adm="mkfilter" data-v="all" class="${mk.filter==='all'?'on':''}">All</button></div>
+   <label class="search">${ic('search')}<input data-mkq placeholder="Search student or question…" value="${esc(mk.q)}"></label></div>
+   <div id="mkList">${mk.loading?skel(5):(rows.length?`<div class="tw"><table class="rt"><thead><tr><th>Student</th><th>Question</th><th>Submitted</th><th>Status</th><th class="num">Time</th><th></th></tr></thead><tbody>`+rows.map(r=>{ const st=mkStatus(r), g=mkGrade(r), sc=g?g.score:r.score;
+     return `<tr class="click" data-adm="mkopen" data-id="${esc(r._id)}"><td class="primary"><b>${esc(r.student||r.email)}</b><div class="muted" style="font-size:12px">${esc(r.email||'')}</div></td><td data-l="Question"><b>${esc(r.qLabel)}</b> <span class="muted">· ${esc(r.title)}</span></td><td data-l="Submitted">${whenShort(r.subAt||r.t)}</td><td data-l="Status">${st==='pending'?'<span class="pill p">Awaiting marking</span>':`<span class="pill s">${sc}/${r.max}</span>${st==='legacy'?' <span class="muted" style="font-size:12px">self-marked</span>':''}`}</td><td class="num" data-l="Time">${fmtT(r.secs)}</td><td class="num" data-l=""><button class="btn" style="padding:6px 12px;min-height:0" data-adm="mkopen" data-id="${esc(r._id)}">${st==='marked'?'Review':'Mark'}</button></td></tr>`; }).join('')+`</tbody></table></div>`:empty('inbox',mk.filter==='pending'?'Nothing waiting to be marked.':'No submissions here yet.'))}</div></div>`;
+  wrapCells($('mkList')||document.body);
+}
+function openMark(r){ mk.sel=r; mk.err=''; renderMarking(); window.scrollTo(0,0); }
+function markReqs(r){ return Array.isArray(r.reqs)?r.reqs:[]; }
+function markHTML(){
+  const r=mk.sel, g=mkGrade(r), reqs=markReqs(r);
+  const tot=reqs.reduce((a,q)=>a+(g&&g.marks&&+g.marks[q.id]||0),0);
+  return `<button class="back" data-adm="mkback">${ic('back')}<span>${mk.back==='student'?'Back to student':'All submissions'}</span></button>
+  <div class="ph"><div><h1>${esc(r.qLabel)} · ${esc(r.title)}</h1><p>${esc(r.student||r.email)} · ${esc(r.email||'')} · submitted ${when(r.subAt||r.t)} · time ${fmtT(r.secs)}${r.allowed?' of '+fmtT(r.allowed):''}</p></div></div>
+  ${g?`<div class="card" style="border-color:var(--ok)"><b>Marks released: ${g.score} / ${r.max}</b> <span class="muted">· ${when(g.gradedAt)}${g.gradedBy?' by '+esc(g.gradedBy):''}. You can edit and release again.</span></div>`:''}
+  ${reqs.length?reqs.map(q=>{ const gm=g&&g.marks?g.marks[q.id]:'', gf=g&&g.feedback?g.feedback[q.id]:'';
+    return `<div class="mkreq"><h4>${esc(q.label)} <span class="muted" style="font-weight:600">${q.max} marks</span></h4><div class="mkq">${esc(q.text)}</div>
+      <div class="mklbl">Student's answer</div><div class="mkans">${esc(q.answer)||'<span class="muted">No answer written.</span>'}</div>
+      ${q.model?`<details class="mkfold"><summary>Model answer</summary><div class="in">${esc(q.model)}</div></details>`:''}
+      ${(q.scheme&&q.scheme.length)?`<details class="mkfold"><summary>ACCA marking scheme</summary><div class="in"><table>${q.scheme.map(it=>`<tr><td>${esc(it.text)}</td><td class="m">${esc(it.marks)}</td></tr>`).join('')}</table></div></details>`:''}
+      <div class="mkmark"><b>Mark</b><input type="number" inputmode="decimal" min="0" max="${q.max}" step="0.5" data-mk="mark" data-r="${esc(q.id)}" data-max="${q.max}" value="${gm!=null&&gm!==undefined?esc(gm):''}" placeholder="0"><span>/ ${q.max}</span></div>
+      <div class="mklbl">Feedback to student (optional)</div><textarea data-mk="fb" data-r="${esc(q.id)}" placeholder="What was good, what was missing…">${esc(gf||'')}</textarea></div>`; }).join('')
+   :`<div class="err">This submission has no per-requirement data yet. It is stored by the student's app the next time they open the site while signed in. Ask the student to open the site, then press Refresh.</div>${r.answer?`<div class="mkans">${esc(r.answer)}</div>`:''}`}
+  ${reqs.length?`<div class="mklbl">Overall comment (optional)</div><textarea data-mk="overall" placeholder="Overall feedback for the student…">${esc((g&&g.overall)||'')}</textarea>
+  <div class="mkbar" style="margin-top:14px"><b style="font-size:17px">Total: <span id="mkTotal">${tot}</span> / ${r.max}</b><span class="muted">Releasing sends marks, feedback and the model answer to the student.</span><div class="spacer" style="flex:1"></div><button class="btn primary" data-adm="mksave" ${mk.busy?'disabled':''}><span>${g?'Update & release marks':'Release marks to student'}</span></button></div>`:''}`;
+}
+async function saveMark(){
+  const r=mk.sel; if(!r||mk.busy) return; const reqs=markReqs(r);
+  const marks={}, feedback={}; let score=0, bad=null;
+  reqs.forEach(q=>{ const inp=document.querySelector(`[data-mk="mark"][data-r="${CSS.escape(q.id)}"]`), fb=document.querySelector(`[data-mk="fb"][data-r="${CSS.escape(q.id)}"]`);
+    const raw=inp?inp.value.trim():''; const v=Math.round(parseFloat(raw)*2)/2;
+    if(raw===''||isNaN(v)||v<0||v>q.max){ bad=bad||q.label; } else { marks[q.id]=v; score+=v; }
+    if(fb&&fb.value.trim()) feedback[q.id]=fb.value.trim().slice(0,4000); });
+  if(bad){ toast('Enter a mark between 0 and the maximum for '+bad); return; }
+  const ov=document.querySelector('[data-mk="overall"]'); const id=r._id;
+  mk.busy=true; const sb=document.querySelector('[data-adm="mksave"]'); if(sb) sb.disabled=true;
+  try{
+    const doc={uid:r.uid,email:r.email||'',student:r.student||'',n:String(r.n),subAt:+r.subAt||0,qLabel:r.qLabel||'',title:r.title||'',score,max:r.max,marks,feedback,overall:ov?ov.value.trim().slice(0,4000):'',gradedAt:Date.now(),gradedBy:(user.email||'').toLowerCase(),updatedAt:FB.serverTimestamp()};
+    await FB.setDoc(FB.doc(db,'gradings',id),doc);
+    mk.grades[id]=doc; if(adm.grades) adm.grades[id]=doc;
+    toast('Marks released: '+score+'/'+r.max);
+    mk.busy=false; mk.sel=null; if(mk.back==='student'){ setNav('students'); renderAdmin(); } else { const n=mk.items.filter(x=>mkStatus(x)==='pending').length; const bd=$('mkBadge'); if(bd) bd.textContent=n?'('+n+')':''; renderMarking(); }
+    window.scrollTo(0,0);
+  }catch(e){ console.error(e); mk.busy=false; if(sb) sb.disabled=false; toast('Could not save: '+adminError(e)); }
+}
+document.addEventListener('input',e=>{
+  const t=e.target; if(t.dataset&&t.dataset.mkq!==undefined){ mk.q=t.value; const pos=t.selectionStart; renderMarking(); const ni=document.querySelector('[data-mkq]'); if(ni){ ni.focus(); try{ni.setSelectionRange(pos,pos);}catch{} } return; }
+  if(t.dataset&&t.dataset.mk==='mark'){ let sum=0; document.querySelectorAll('[data-mk="mark"]').forEach(i=>{ sum+=Math.min(+i.dataset.max,Math.max(0,parseFloat(i.value)||0)); }); const el=$('mkTotal'); if(el) el.textContent=sum; }
+});
 
 /* ---------- PDF library (links only) ---------- */
 const pdf={items:[],loading:false,err:'',busy:false,edit:null};
@@ -582,12 +680,18 @@ document.addEventListener('click',e=>{
   const act=e.target.closest('[data-act]');
   if(act){ const k=act.dataset.act; if(k==='out') FB.signOut(auth); else if(k==='theme') toggleTheme(); else if(k==='signin') signIn(act); return; }
   const nv=e.target.closest('[data-nav]');
-  if(nv){ setNav(nv.dataset.nav); window.scrollTo(0,0); if(nv.dataset.nav==='students'){ adm.sel=null; loadStudents(); } else loadPdfs(); return; }
+  if(nv){ setNav(nv.dataset.nav); window.scrollTo(0,0); if(nv.dataset.nav==='students'){ adm.sel=null; loadStudents(); } else if(nv.dataset.nav==='marking'){ mk.sel=null; mk.back=''; loadMarking(); } else loadPdfs(); return; }
   const pd=e.target.closest('[data-pdf]');
   if(pd){ const k=pd.dataset.pdf; if(k==='add') addPdf(); else if(k==='del') delPdf(pd.dataset.id); else if(k==='edit') editPdf(pd.dataset.id); else if(k==='save') savePdfEdit(); else if(k==='cancel'){ pdf.edit=null; renderPdfs(); } return; }
   const b=e.target.closest('[data-adm]'); if(!b) return;
   switch(b.dataset.adm){
     case 'open': openStudent(b.dataset.id); break;
+    case 'grade': { const r=adm.rows.find(x=>x._id===b.dataset.id); if(r){ mk.back='student'; setNav('marking'); mk.grades=mk.grades||{}; mk.grades[r._id]=(adm.grades||{})[r._id]; openMark(r); } break; }
+    case 'mkopen': { const r=mk.items.find(x=>x._id===b.dataset.id); if(r) openMark(r); break; }
+    case 'mkback': if(mk.back==='student'){ mk.sel=null; setNav('students'); renderAdmin(); } else { mk.sel=null; renderMarking(); } window.scrollTo(0,0); break;
+    case 'mkrefresh': loadMarking(); break;
+    case 'mkfilter': mk.filter=b.dataset.v; renderMarking(); break;
+    case 'mksave': saveMark(); break;
     case 'emailRep': emailReport(); break;
     case 'copyRep': copyReport(); break;
     case 'ban': setBan(true); break;

@@ -900,10 +900,10 @@ function renderHomeB(){
   const drafts=all.filter(n=>{const b=ST.bAns[n];return b&&!b.submitted&&Object.values(b.ans||{}).some(v=>JSON.stringify(v).replace(/[\[\]",]/g,'').trim());});
   let h=`<section class="hero">${secSwitch()}<div class="eyebrow" style="margin-top:14px">ACCA Applied Skills · Audit &amp; Assurance (AA)</div>
    <h1>Section B constructed response</h1>${nameLine()}
-   <p>${all.length} past-exam style questions (20 and 30 marks). Type your answer to each requirement against the clock, then compare it with the model answer and ACCA marking scheme and mark yourself.</p></section>
+   <p>${all.length} past-exam style questions (20 and 30 marks). Type your answer to each requirement against the clock, then submit it. Your tutor marks it and your marks, feedback and the model answer appear here once marking is done.</p></section>
    <div class="stats">
     <div class="stat"><b>${A.done}<span style="font-size:15px;color:var(--muted)"> / ${A.total}</span></b><span>Questions attempted</span></div>
-    <div class="stat"><b style="color:${A.pct==null?'inherit':A.pct>=50?'var(--ok)':'var(--bad)'}">${A.pct!=null?A.pct+'%':'—'}</b><span>Average self-marked score</span></div>
+    <div class="stat"><b style="color:${A.pct==null?'inherit':A.pct>=50?'var(--ok)':'var(--bad)'}">${A.pct!=null?A.pct+'%':'—'}</b><span>Average tutor-marked score</span></div>
     <div class="stat"><b>${A.sc}<span style="font-size:15px;color:var(--muted)"> / ${A.mx}</span></b><span>Marks earned</span></div>
     <div class="stat"><b>${A.done?fmt(A.secs):'—'}</b><span>Time used${A.done?' (allowed '+fmt(A.allow)+')':''}</span></div>
    </div>
@@ -920,7 +920,7 @@ function renderHomeB(){
 function bTile(n){
   const q=BQ[n], b=ST.bAns[n]; let st='';
   if(b&&b.scored){ const p=Math.round(b.score/q.marks*100); st=`<span class="pill ${band(p)[0]}">${b.score}/${q.marks} · ${p}%</span>`; }
-  else if(b&&b.submitted) st='<span class="pill d">Mark yourself</span>';
+  else if(b&&b.submitted) st='<span class="pill d">Awaiting tutor marking</span>';
   else if(b&&Object.keys(b.ans||{}).length) st='<span class="pill n">Draft</span>';
   return `<button class="btile" data-act="bopen" data-n="${n}"><b>${esc(q.title)}</b><small>${esc(bLabel(n))} · ${q.marks} marks${q.source?' · '+esc(q.source):''}</small>${st?'<div>'+st+'</div>':''}</button>`;
 }
@@ -945,29 +945,36 @@ function renderB(n){
   const q=BQ[n], b=bState(n), reqs=reqsOf(q), done=b.submitted;
   let h=`<div class="pbar"><button class="iconbtn" data-act="home">← Section B</button><div><h2>${esc(bLabel(n))} · ${esc(q.title)}</h2><div class="sub">${esc(q.topic)} · ${q.marks} marks${q.source?' · '+esc(q.source):''} · time allowed ${fmt(q.marks*108)}</div></div><div class="spacer"></div>
     <span class="qtimer" id="btimer" data-n="${n}"></span>
-    ${done?`<button class="btn ghost" data-act="bretry" data-n="${n}">↺ Start again</button>`:`<button class="btn" data-act="bsubmit" data-n="${n}">Submit &amp; see model answer</button>`}</div>
+    ${done?`<button class="btn ghost" data-act="bretry" data-n="${n}">↺ Start again</button>`:`<button class="btn" data-act="bsubmit" data-n="${n}">Submit to tutor</button>`}</div>
   <details class="panel mobile-scen"><summary>📄 ${esc(q.title)} — scenario &amp; requirements</summary><div class="rich">${blocks(q.blocks)}</div></details>
   <div class="grid"><aside class="panel scen scen-desk"><span class="tag">${esc(q.topic)}</span><h3>${esc(q.title)}</h3><div class="rich">${blocks(q.blocks)}</div></aside><section class="bwork">`;
-  if(done){
+  const gr=b.grade, graded=!!(done&&gr);
+  if(done&&!graded){
+    h+=`<div class="rcard" style="border-color:var(--flag);background:var(--flagSoft)"><b>⏳ Submitted — awaiting your tutor's marking</b><div style="color:var(--muted);font-size:14px;margin-top:4px">Your answer has been sent to your tutor. Your marks, feedback and the model answer will appear on this page as soon as it has been marked.${ST.name?'':' (Add your name so your tutor knows who you are.)'}</div><div style="margin-top:10px"><button class="btn ghost" data-act="bpull">↻ Check for marks</button></div></div>`;
+  }
+  if(graded){
+    h+=`<div class="rcard" style="border-color:var(--ok);background:var(--okSoft)"><b>✅ Marked by your tutor: ${gr.score} / ${q.marks}</b>${gr.overall?`<div class="rich" style="margin-top:8px;font-size:14.5px"><div class="lbl">Tutor's overall comment</div><div style="white-space:pre-wrap">${esc(gr.overall)}</div></div>`:''}</div>`;
     h+=(q.tips?`<details class="fold"><summary>💡 Key answer tips</summary><div class="rich">${richText(q.tips)}</div></details>`:'')+(q.examiner?`<details class="fold"><summary>🧑‍🏫 Examiner's comments</summary><div class="rich">${richText(q.examiner)}</div></details>`:'');
   }
   reqs.forEach(r=>{
     const ans=(q.answer||[]).find(a=>a.req===r.id), sch=(q.scheme||[]).find(s=>s.req===r.id), max=(sch&&sch.max)||r.marks;
     h+=`<div class="rcard"><div class="rh"><b>${esc(r.label||'Answer')}</b><span class="m">${r.marks} marks</span></div><div class="rq">${esc(r.text)}</div>`;
     if(!done){ h+=ansEditor(n,r,false); }
+    else if(!graded){ h+=`<div class="lbl">Your answer (submitted)</div>${ansEditor(n,r,true)}`; }
     else {
+      const gm=gr.marks&&gr.marks[r.id], gf=gr.feedback&&gr.feedback[r.id];
       h+=`<div class="lbl">Your answer</div>${ansEditor(n,r,true)}
+        <div class="selfmark" style="background:var(--okSoft)"><b>Tutor's mark for ${esc(r.label||'this part')}</b><span style="font-weight:800;font-size:17px">${gm!=null&&gm!==''?gm:0} / ${max}</span></div>
+        ${gf?`<div class="lbl">Tutor feedback</div><div class="yours" style="border-style:solid">${esc(gf)}</div>`:''}
         <div class="lbl" style="color:var(--ok)">Model answer${ans&&ans.title?' — '+esc(ans.title):''}</div><div class="model"><div class="rich">${ans?blocks(ans.blocks):'<p>—</p>'}</div></div>
-        ${sch?`<div class="lbl">ACCA marking scheme</div>${schemeHtml(sch)}`:''}
-        <div class="selfmark"><b>Your mark for ${esc(r.label||'this part')}</b><input type="number" inputmode="decimal" min="0" max="${max}" step="0.5" data-act="bmark" data-n="${n}" data-r="${r.id}" value="${b.marks[r.id]!=null?b.marks[r.id]:''}" placeholder="0"> <span>/ ${max}</span><span style="color:var(--muted);font-size:12.5px">Give yourself a mark for each valid point that matches the model answer / scheme.</span></div>`;
+        ${sch?`<div class="lbl">ACCA marking scheme</div>${schemeHtml(sch)}`:''}`;
     }
     h+='</div>';
   });
   if(done){
-    const tot=reqs.reduce((s,r)=>s+(+b.marks[r.id]||0),0), all=reqs.every(r=>b.marks[r.id]!=null&&b.marks[r.id]!=='');
-    h+=`<div class="scorebar"><b style="font-size:17px">Total: <span id="btotal">${tot}</span> / ${q.marks}</b><span style="color:var(--muted)">Time taken ${fmt(b.secs)} (allowed ${fmt(q.marks*108)})</span><div class="spacer"></div><button class="btn" data-act="bsave" data-n="${n}" id="bsaveBtn" ${all?'':'disabled'}>${b.scored?'Update my score':'Save my score'}</button></div>`;
+    h+=`<div class="scorebar">${graded?`<b style="font-size:17px">Total: ${gr.score} / ${q.marks}</b>`:`<b style="font-size:15px">⏳ Awaiting tutor marking</b>`}<span style="color:var(--muted)">Time taken ${fmt(b.secs)} (allowed ${fmt(q.marks*108)})</span><div class="spacer"></div>${graded?'':'<button class="btn ghost" data-act="bpull">↻ Check for marks</button>'}</div>`;
   } else {
-    h+=`<div class="scorebar" style="position:static"><span style="color:var(--muted)">✓ Your answers save automatically as you type.</span><div class="spacer"></div><button class="btn" data-act="bsubmit" data-n="${n}">Submit &amp; see model answer</button></div>`;
+    h+=`<div class="scorebar" style="position:static"><span style="color:var(--muted)">✓ Your answers save automatically as you type.</span><div class="spacer"></div><button class="btn" data-act="bsubmit" data-n="${n}">Submit to tutor</button></div>`;
   }
   h+='</section></div>';
   app.innerHTML=h; window.scrollTo(0,0);
@@ -983,13 +990,30 @@ function bSubmit(n){
   const q=BQ[n], b=bState(n);
   const empty=reqsOf(q).filter(r=>!wcount(b.ans[r.id])).length;
   const go=()=>{ flushTime(); active=null; b.secs=Math.round((ST.tOn['B'+n]||0)/1000); b.submitted=true; b.subAt=Date.now(); save(); renderB(n); };
-  if(empty) confirmBox('Submit now?',`${empty} requirement${empty>1?'s have':' has'} no answer yet. Once you submit, the model answer is shown and your time stops.`,'Submit',go); else go();
+  if(empty) confirmBox('Submit now?',`${empty} requirement${empty>1?'s have':' has'} no answer yet. Once you submit, your answer goes to your tutor for marking and your time stops.`,'Submit',go); else go();
 }
-function bSaveScore(n){
-  const q=BQ[n], b=bState(n), reqs=reqsOf(q);
-  b.score=reqs.reduce((s,r)=>s+(+b.marks[r.id]||0),0); b.scored=true;
-  ST.blog.push({n,sub:b.subAt||0,t:Date.now(),score:b.score,max:q.marks,s:b.secs||0,parts:reqs.map(r=>(r.label||r.id)+' '+(+b.marks[r.id]||0)+'/'+(((q.scheme||[]).find(s=>s.req===r.id)||{}).max||r.marks)).join('; '),ans:bAnswerText(n)});
-  save(); syncNow(); toast('Score saved: '+b.score+'/'+q.marks); renderB(n);
+function bPlain(bs){ return (bs||[]).map(b=>{ if(b.p!=null) return String(b.p); if(b.h!=null) return String(b.h).toUpperCase(); if(b.list) return b.list.map(x=>'• '+x).join('\n'); if(b.table) return b.table.map(r=>r.join(' | ')).join('\n'); if(b.note!=null) return 'Note: '+b.note; return ''; }).filter(Boolean).join('\n\n'); }
+function bReqPack(n){
+  const q=BQ[n], b=(ST.bAns&&ST.bAns[n])||{ans:{}};
+  return reqsOf(q).map(r=>{ const sch=(q.scheme||[]).find(x=>x.req===r.id), ans=(q.answer||[]).find(a=>a.req===r.id); const v=b.ans[r.id];
+    const txt=Array.isArray(v)? v.filter(row=>row.some(c=>c.trim())).map((row,i)=>(i+1)+'. '+row.map((c,ci)=>r.columns[ci]+': '+c.trim()).join(' | ')).join('\n') : (v||'').trim();
+    return {id:String(r.id),label:String(r.label||r.id),text:String(r.text||'').slice(0,3000),max:(sch&&sch.max)||r.marks,answer:txt.slice(0,20000),model:ans?bPlain(ans.blocks).slice(0,12000):'',scheme:sch?(sch.items||[]).map(it=>({text:String(it.text||'').slice(0,500),marks:String(it.marks||'')})).slice(0,60):[]}; });
+}
+function bApplyGrades(list){
+  let changed=false, shown=null;
+  (list||[]).forEach(g=>{
+    const n=String(g.n), q=BQ[n], b=ST.bAns[n]; if(!q||!b||!b.submitted||+b.subAt!==+g.subAt) return;
+    const prev=b.grade; if(prev&&(+prev.gradedAt||0)>=(+g.gradedAt||0)) return;
+    b.grade={score:+g.score||0,marks:g.marks||{},feedback:g.feedback||{},overall:g.overall||'',gradedAt:+g.gradedAt||Date.now()};
+    b.marks=Object.assign({},g.marks||{}); b.score=b.grade.score; b.scored=true;
+    const reqs=reqsOf(q), parts=reqs.map(r=>(r.label||r.id)+' '+(+(b.marks[r.id])||0)+'/'+(((q.scheme||[]).find(x=>x.req===r.id)||{}).max||r.marks)).join('; ');
+    const ent={n,sub:b.subAt,t:b.grade.gradedAt,score:b.score,max:q.marks,s:b.secs||0,parts,ans:bAnswerText(n)};
+    const i=ST.blog.findIndex(l=>l.n===n&&l.sub===b.subAt);
+    if(i>=0){ ent.t=ST.blog[i].t; ST.blog[i]=ent; } else ST.blog.push(ent);
+    changed=true; shown=n;
+  });
+  if(changed){ save(); syncNow(); toast('Your tutor has marked '+bLabel(shown)+': '+ST.bAns[shown].score+'/'+BQ[shown].marks);
+    if(view==='bq'&&curB){ renderB(curB); } else if(view==='home'&&ST.sec==='B'){ renderHome(); } else if(view==='report'){ renderReport(); } }
 }
 document.addEventListener('input',e=>{
   const el=e.target, act=el.dataset&&el.dataset.act; if(!act||!/^b(txt|tab|mark)$/.test(act)) return;
@@ -1094,7 +1118,7 @@ function renderReport(){
   // section B
   const bAll=(DATA.b||[]).map(q=>q.n), BA=bAgg(bAll);
   if(BA.done){
-    h+=`<div class="card"><h3>Section B — constructed response</h3><p class="cap">Self-marked against the model answer and ACCA marking scheme. ${BA.done} question${BA.done>1?'s':''} · ${BA.sc}/${BA.mx} marks · average ${BA.pct}% · time used ${fmt(BA.secs)} of ${fmt(BA.allow)} allowed.</p><div class="tablewrap"><table class="rt"><thead><tr><th>Topic</th><th class="num">Done</th><th>Average score</th><th class="num">Time used / allowed</th><th>Status</th></tr></thead><tbody>`+
+    h+=`<div class="card"><h3>Section B — constructed response</h3><p class="cap">Marked by your tutor. ${BA.done} question${BA.done>1?'s':''} · ${BA.sc}/${BA.mx} marks · average ${BA.pct}% · time used ${fmt(BA.secs)} of ${fmt(BA.allow)} allowed.</p><div class="tablewrap"><table class="rt"><thead><tr><th>Topic</th><th class="num">Done</th><th>Average score</th><th class="num">Time used / allowed</th><th>Status</th></tr></thead><tbody>`+
       B_TOPICS.map(t=>{const x=bAgg(bAll.filter(n=>BQ[n].topic===t)), [c,l]=band(x.pct); return `<tr><td>${TOPIC_ICON[t]||'📚'} ${esc(t)}</td><td class="num">${x.done}/${x.total}</td><td><div style="display:flex;gap:8px;align-items:center">${bar(x.pct,x.pct>=50?'var(--ok)':'var(--bad)')}<span class="num" style="min-width:38px">${x.pct!=null?x.pct+'%':'—'}</span></div></td><td class="num" style="color:${x.secs>x.allow?'var(--flag)':'inherit'}">${x.done?fmt(x.secs)+' / '+fmt(x.allow):'—'}</td><td><span class="pill ${c}">${l}</span></td></tr>`}).join('')+
       `</tbody></table></div><div class="lbl">Your Section B attempts</div><div class="tablewrap"><table class="rt"><thead><tr><th>Date</th><th>Question</th><th class="num">Score</th><th>By requirement</th><th class="num">Time</th></tr></thead><tbody>`+
       [...ST.blog].reverse().slice(0,15).map(l=>{const p=Math.round(l.score/l.max*100); return `<tr><td style="white-space:nowrap">${new Date(l.t).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</td><td><button class="rlink" data-act="bopen" data-n="${l.n}">${esc(bLabel(l.n))} ${esc(BQ[l.n].title)}</button></td><td class="num"><span class="pill ${band(p)[0]}">${l.score}/${l.max}</span></td><td style="font-size:12.5px;color:var(--muted)">${esc(l.parts)}</td><td class="num" style="color:${l.s>l.max*108?'var(--flag)':'inherit'}">${fmt(l.s)}</td></tr>`;}).join('')+`</tbody></table></div></div>`;
@@ -1174,7 +1198,7 @@ document.addEventListener('click',e=>{
     case 'sec': ST.sec=b.dataset.s; save(); renderHome(); break;
     case 'bopen': ST.sec='B'; save(); renderB(b.dataset.n); break;
     case 'bsubmit': bSubmit(b.dataset.n); break;
-    case 'bsave': bSaveScore(b.dataset.n); break;
+    case 'bpull': window.dispatchEvent(new CustomEvent('aa-pull-grades')); toast('Checking for marks…'); break;
     case 'bretry': confirmBox('Start this question again?','Your written answers will be cleared. Your saved score stays in your history.','Start again',()=>{ const k=b.dataset.n; ST.bAns[k]={ans:{},submitted:false,marks:{}}; delete ST.tOn['B'+k]; save(); renderB(k); }); break;
     case 'baddrow': { const k=b.dataset.n, rid=b.dataset.r, st=bState(k), r=reqsOf(BQ[k]).find(x=>x.id===rid); let v=st.ans[rid]; if(!Array.isArray(v)) v=st.ans[rid]=Array.from({length:defaultRows(r)},()=>r.columns.map(()=>'')); v.push(r.columns.map(()=>'')); save(); const y=window.scrollY; renderB(k); window.scrollTo(0,y); break; }
     case 'name': askName(true); break;
@@ -1219,12 +1243,13 @@ else renderHome();
 window.__aaHooks={
   describe(kind,l){
     if(kind==='B'){ const q=BQ[l.n]; if(!q) return null;
-      return {section:'B',qn:'B'+l.n,qLabel:bLabel(l.n),title:q.title||'',topic:q.topic||'',qType:'Constructed response',mode:'written',secs:l.s||0,allowed:q.marks*108,score:+l.score||0,max:q.marks,parts:String(l.parts||'').slice(0,400),t:l.t}; }
+      return {section:'B',qn:'B'+l.n,qLabel:bLabel(l.n),title:q.title||'',topic:q.topic||'',qType:'Constructed response',mode:'written',secs:l.s||0,allowed:q.marks*108,score:+l.score||0,max:q.marks,parts:String(l.parts||'').slice(0,400),t:l.t,n:String(l.n),subAt:+(l.sub||0),graded:true,answer:String(l.ans||'').slice(0,40000),reqs:(ST.bAns[l.n]&&ST.bAns[l.n].subAt===l.sub)?bReqPack(l.n):[]}; }
     const q=Q[l.n]; if(!q) return null; const sc=SC[q.scenario]; if(!sc) return null;
     return {section:'A',qn:String(l.n),qLabel:label(l.n),title:sc.title,topic:sc.topic,qType:TYPE_NAME[q.type]||String(q.type),mode:l.m||'practice',secs:l.s||0,allowed:TARGET,correct:l.c?1:0,t:l.t};
   },
+  applyGrades:bApplyGrades,
   describeSub(n,b){ const q=BQ[n]; if(!q||!b||!b.submitted||!b.subAt) return null;
-    return {section:'B',qn:'B'+n,qLabel:bLabel(n),title:q.title||'',topic:q.topic||'',qType:'Constructed response',mode:'written',secs:b.secs||0,allowed:q.marks*108,score:null,max:q.marks,parts:'Submitted - not yet self-marked',t:b.subAt}; },
+    return {section:'B',qn:'B'+n,qLabel:bLabel(n),title:q.title||'',topic:q.topic||'',qType:'Constructed response',mode:'written',secs:b.secs||0,allowed:q.marks*108,score:null,max:q.marks,parts:'Submitted - awaiting tutor marking',t:b.subAt,n:String(n),subAt:b.subAt,graded:false,answer:bAnswerText(n).slice(0,40000),reqs:bReqPack(n)}; },
   setNameIfEmpty(n){ if(n&&!ST.name){ ST.name=n; save(); syncNow(); if(view==='home') renderHome(); else if(view==='report') renderReport(); } },
   askNameLater(){ if(!ST.name) setTimeout(()=>askName(false),400); },
   pause(){ flushTime(); active=null; stopTimer(); save(); }
@@ -1322,6 +1347,7 @@ async function onAuth(u){
     await writeProfile(u);
     await queueAttempts(readLocal(),true);
     statusEl.textContent='● Cloud progress synced';
+    startGradeListener();
     if(hooks().setNameIfEmpty) hooks().setNameIfEmpty(u.displayName||'');
     if(!(readLocal()||{}).name&&!u.displayName&&hooks().askNameLater) hooks().askNameLater();
   }catch(e){
@@ -1452,6 +1478,14 @@ async function syncAttempts(state,force){
   catch(e){ console.error('Student stats sync failed',e); firstErr=firstErr||e; }
   if(firstErr) throw firstErr;
 }
+/* ---------- Section B: marks released by the tutor (admin panel) ---------- */
+let gradeUnsub=null;
+function deliverGrades(snap){ try{ const list=snap.docs.map(d=>d.data()); if(hooks().applyGrades) hooks().applyGrades(list); }catch(e){ console.error('apply grades',e); } }
+function startGradeListener(){
+  if(!user||!db||gradeUnsub) return;
+  try{ gradeUnsub=FB.onSnapshot(FB.query(FB.collection(db,'gradings'),FB.where('uid','==',user.uid)),deliverGrades,e=>console.warn('gradings listener',e&&e.code||e)); }catch(e){ console.warn(e); }
+}
+window.addEventListener('aa-pull-grades',async()=>{ if(!user||!db) return; try{ deliverGrades(await FB.getDocs(FB.query(FB.collection(db,'gradings'),FB.where('uid','==',user.uid)))); }catch(e){ console.warn('pull grades',e); } });
 function queueAttempts(s,f){ const p=attemptsChain.then(()=>syncAttempts(s,f)); attemptsChain=p.catch(()=>{}); return p; }
 
 /* ---------- sign in / out ---------- */
