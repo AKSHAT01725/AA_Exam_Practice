@@ -56,6 +56,7 @@ h1,h2,h3{margin:0;line-height:1.2}
 .gate h2{font-family:Fraunces,serif;font-size:26px;margin-bottom:8px}
 .gate p{color:var(--muted);margin:0 0 18px}
 .gate .msg{margin-top:14px;font-size:13.5px;color:var(--bad)}
+.btn.ghost.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 .chip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .chip img{width:28px;height:28px;border-radius:50%}
 .adm h2{font-family:Fraunces,serif;font-size:26px;margin:22px 0 4px}
@@ -84,6 +85,7 @@ h1,h2,h3{margin:0;line-height:1.2}
 <body>
 <header class="top"><div class="wrap">
   <div class="logo"><span class="mark">Y</span><span>AA Exam Practice<small>Admin console</small></span></div>
+  <nav id="nav" style="display:none;gap:6px;margin-left:14px"><button class="btn ghost" data-nav="students">Students</button><button class="btn ghost" data-nav="pdfs">PDFs</button></nav>
   <div class="spacer"></div>
   <div id="who" style="display:flex;align-items:center;gap:10px"></div>
 </div></header>
@@ -99,7 +101,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-LJE8YG75GL"
 };
 // Must match ADMIN_EMAILS in index.html and isAdmin() in firestore.rules (lowercase).
-const ADMIN_EMAILS = ['akshat.y.shah1725@gmail.com'];
+const ADMIN_EMAILS = ['your-admin@gmail.com'];
 
 const $=id=>document.getElementById(id);
 const appEl=$('app');
@@ -140,10 +142,11 @@ function renderUser(){
   $('outTop').addEventListener('click',()=>FB.signOut(auth));
 }
 async function onAuth(u){
-  user=u; renderUser();
+  user=u; renderUser(); $('nav').style.display='none';
   if(!u){ gate('Admin sign-in','Sign in with the Google account that has admin access.',GBTN); return; }
   if(!isAdmin(u)){ gate('Not authorised',`${u.email} does not have admin access.`,'<button class="btn ghost" id="outBtn">Sign out</button>'); return; }
   appEl.innerHTML='<div class="gate"><p>Loading…</p></div>';
+  $('nav').style.display='flex'; setNav('students');
   loadStudents();
 }
 
@@ -284,6 +287,58 @@ document.addEventListener('input',e=>{
   else if(k==='fq'){adm.f.q=v;adm.limit=100;renderRows();} else if(k==='fsec'){adm.f.sec=v;adm.limit=100;renderRows();} else if(k==='ftopic'){adm.f.topic=v;adm.limit=100;renderRows();}
 });
 
+
+
+/* ---------- PDF library (admin) — links only ---------- */
+const pdf={items:[],loading:false,err:'',busy:false,msg:''};
+const setNav=k=>document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.nav===k));
+// accepts https links, or a path inside this site such as pdfs/chapter1.pdf (no scheme, no leading //)
+const okLink=u=>/^https?:\/\/\S+$/i.test(u)||(!/^[a-z][a-z0-9+.\-]*:/i.test(u)&&!u.startsWith('//')&&!/\s/.test(u)&&u.length>0);
+document.addEventListener('click',e=>{
+  const n=e.target.closest('[data-nav]');
+  if(n){ setNav(n.dataset.nav); if(n.dataset.nav==='students'){ adm.sel=null; loadStudents(); } else loadPdfs(); return; }
+  const b=e.target.closest('[data-pdf]'); if(!b) return;
+  if(b.dataset.pdf==='add') addPdf();
+  if(b.dataset.pdf==='del') delPdf(b.dataset.id);
+});
+async function loadPdfs(){
+  adm.active=false; pdf.loading=true; pdf.err=''; renderPdfs();
+  try{ const snap=await FB.getDocs(FB.query(FB.collection(db,'pdfs'),FB.orderBy('createdAt','desc'))); pdf.items=snap.docs.map(d=>({id:d.id,...d.data()})); }
+  catch(e){ console.error(e); pdf.err=friendlyError(e); }
+  pdf.loading=false; renderPdfs();
+}
+function renderPdfs(){
+  const keep={t:($('pTitle')||{}).value||'',d:($('pDesc')||{}).value||'',u:($('pUrl')||{}).value||''};
+  const rows=pdf.items.map(x=>`<tr><td><b>${esc(x.title||'Untitled')}</b><div class="muted" style="font-size:12.5px">${esc(x.description||'')}</div></td><td style="word-break:break-all;max-width:320px" class="muted">${esc(x.url||'')}</td><td>${x.createdAt&&x.createdAt.toMillis?new Date(x.createdAt.toMillis()).toLocaleDateString():'—'}</td><td><a href="${esc(okLink(x.url||'')?x.url:'#')}" target="_blank" rel="noopener" class="rlink">Open</a></td><td class="num"><button class="btn ghost" data-pdf="del" data-id="${esc(x.id)}">Delete</button></td></tr>`).join('');
+  appEl.innerHTML=`<div class="adm"><h2>PDF library</h2><p class="sub">Add a link to a PDF. It appears for signed-in students under <b>PDFs</b> in the navigation bar and next to Section A / B.</p>
+  ${pdf.err?`<div class="err">${esc(pdf.err)}</div>`:''}
+  <div class="card"><h3>Add a PDF</h3>
+    <div class="bar2"><input class="grow" id="pTitle" placeholder="Title (e.g. Chapter 3 – Internal controls notes)" value="${esc(keep.t)}"></div>
+    <div class="bar2"><input class="grow" id="pDesc" placeholder="Short description (optional)" value="${esc(keep.d)}"></div>
+    <div class="bar2"><input class="grow" id="pUrl" placeholder="PDF link or path, e.g. pdfs/chapter3.pdf" value="${esc(keep.u)}"></div>
+    <p class="muted" style="font-size:12.5px;margin:0 0 10px">Best option with GitHub Pages: put the file in your repo (for example in a <code>pdfs</code> folder) and enter <code>pdfs/chapter3.pdf</code>, or the full link <code>https://yourname.github.io/yourrepo/pdfs/chapter3.pdf</code>. Any other https link also works.</p>
+    <div class="bar2"><button class="btn" data-pdf="add" ${pdf.busy?'disabled':''}>Add PDF</button><span class="muted" id="pMsg">${esc(pdf.msg)}</span></div>
+  </div>
+  <div class="card"><h3>Library (${pdf.items.length})</h3>${pdf.loading?'<p class="muted">Loading…</p>':(rows?`<div class="tablewrap"><table><thead><tr><th>Title</th><th>Link</th><th>Added</th><th></th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">No PDFs yet.</p>')}</div></div>`;
+}
+async function addPdf(){
+  const title=$('pTitle').value.trim(), desc=$('pDesc').value.trim(), url=$('pUrl').value.trim().replace(/^\.\//,'');
+  const say=t=>{pdf.msg=t; const m=$('pMsg'); if(m) m.textContent=t;};
+  if(!title){ say('Enter a title.'); return; }
+  if(!url){ say('Enter the PDF link or path.'); return; }
+  if(!okLink(url)){ say('That link is not valid. Use https://… or a path like pdfs/file.pdf'); return; }
+  try{
+    pdf.busy=true; say('Saving…');
+    await FB.addDoc(FB.collection(db,'pdfs'),{title,description:desc,url,kind:'link',createdAt:FB.serverTimestamp(),uploadedBy:(user.email||'').toLowerCase()});
+    pdf.busy=false; pdf.msg='Added.'; pdf.err=''; await loadPdfs();
+    ['pTitle','pDesc','pUrl'].forEach(i=>{const el=$(i); if(el) el.value='';});
+  }catch(e){ console.error(e); pdf.busy=false; pdf.msg=''; pdf.err=friendlyError(e); renderPdfs(); }
+}
+async function delPdf(id){
+  const x=pdf.items.find(i=>i.id===id); if(!x||!confirm('Remove "'+(x.title||'this PDF')+'" from the library? (The file itself stays in GitHub.)')) return;
+  try{ await FB.deleteDoc(FB.doc(db,'pdfs',id)); pdf.err=''; await loadPdfs(); }
+  catch(e){ console.error(e); pdf.err=friendlyError(e); renderPdfs(); }
+}
 
 /* ---------- start ---------- */
 try{
